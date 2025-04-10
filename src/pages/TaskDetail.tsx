@@ -40,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useTask } from "@/context/TaskContext";
+import { useTask, TaskStatus } from "@/context/TaskContext";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
@@ -100,8 +100,8 @@ const TaskDetail = () => {
     updateTask(task.id, {
       title: editedTask.title,
       description: editedTask.description,
-      status: editedTask.status as TaskStatus, // Cast to TaskStatus type
-      priority: editedTask.priority as "low" | "medium" | "high", // Cast to proper priority type
+      status: editedTask.status as TaskStatus,
+      priority: editedTask.priority as "low" | "medium" | "high",
       dueDate: new Date(editedTask.dueDate).toISOString(),
     });
     setIsEditDialogOpen(false);
@@ -331,8 +331,8 @@ const TaskDetail = () => {
                 <label htmlFor="status" className="text-sm font-medium">Status</label>
                 <Select
                   value={editedTask.status}
-                  onValueChange={(value) =>
-                    setEditedTask({ ...editedTask, status: value })
+                  onValueChange={(value: string) =>
+                    setEditedTask({ ...editedTask, status: value as TaskStatus })
                   }
                 >
                   <SelectTrigger>
@@ -350,8 +350,8 @@ const TaskDetail = () => {
                 <label htmlFor="priority" className="text-sm font-medium">Priority</label>
                 <Select
                   value={editedTask.priority}
-                  onValueChange={(value) =>
-                    setEditedTask({ ...editedTask, priority: value })
+                  onValueChange={(value: string) =>
+                    setEditedTask({ ...editedTask, priority: value as "low" | "medium" | "high" })
                   }
                 >
                   <SelectTrigger>
