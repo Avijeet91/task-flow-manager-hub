@@ -100,8 +100,8 @@ const TaskDetail = () => {
     updateTask(task.id, {
       title: editedTask.title,
       description: editedTask.description,
-      status: editedTask.status as any,
-      priority: editedTask.priority as any,
+      status: editedTask.status as TaskStatus, // Cast to TaskStatus type
+      priority: editedTask.priority as "low" | "medium" | "high", // Cast to proper priority type
       dueDate: new Date(editedTask.dueDate).toISOString(),
     });
     setIsEditDialogOpen(false);
