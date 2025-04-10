@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,13 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Task Management System custom colors
+				task: {
+					pending: '#FFA500',
+					inProgress: '#3498DB',
+					completed: '#2ECC71',
+					overdue: '#E74C3C'
 				}
 			},
 			borderRadius: {
