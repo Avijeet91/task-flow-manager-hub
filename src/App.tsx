@@ -7,13 +7,12 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { TaskProvider } from "./context/TaskContext";
 import { EmployeeProvider } from "./context/EmployeeContext";
-import Auth from "./pages/Auth";
-import Register from "@/pages/Register";
 
 // Layouts
 import MainLayout from "./components/MainLayout";
 
 // Pages
+import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import TaskDetail from "./pages/TaskDetail";
@@ -34,7 +33,7 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   }
   
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/login" replace />;
   }
   
   return children;
@@ -49,7 +48,7 @@ const AdminRoute = ({ children }: { children: JSX.Element }) => {
   }
   
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/login" replace />;
   }
   
   if (!isAdmin) {
@@ -70,8 +69,8 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 {/* Public Routes */}
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/" element={<Navigate to="/auth" replace />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/" element={<Navigate to="/login" replace />} />
                 
                 {/* Protected Routes inside MainLayout */}
                 <Route
@@ -106,7 +105,6 @@ const App = () => (
                     }
                   />
                 </Route>
-                <Route path="/register" element={<Register />} />
                 
                 {/* Catch-all route */}
                 <Route path="*" element={<NotFound />} />

@@ -9,36 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      profiles: {
-        Row: {
-          created_at: string
-          email: string
-          employee_id: string | null
-          id: string
-          name: string
-          role: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          employee_id?: string | null
-          id: string
-          name: string
-          role: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          employee_id?: string | null
-          id?: string
-          name?: string
-          role?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       user_settings: {
         Row: {
           compact_mode: boolean | null
@@ -77,10 +47,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      next_employee_id_value: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
