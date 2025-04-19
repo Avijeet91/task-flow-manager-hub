@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,7 +13,6 @@ import Auth from "./pages/Auth";
 import MainLayout from "./components/MainLayout";
 
 // Pages
-import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import TaskDetail from "./pages/TaskDetail";
@@ -33,7 +33,7 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   }
   
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/auth" replace />;
   }
   
   return children;
@@ -48,7 +48,7 @@ const AdminRoute = ({ children }: { children: JSX.Element }) => {
   }
   
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/auth" replace />;
   }
   
   if (!isAdmin) {

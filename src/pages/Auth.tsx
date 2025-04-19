@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Card,
   CardContent,
@@ -18,7 +19,12 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Mail, Key, UserPlus, LogIn } from "lucide-react";
+import {
+  Mail,
+  Key,
+  UserPlus,
+  LogIn,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
