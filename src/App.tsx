@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { TaskProvider } from "./context/TaskContext";
 import { EmployeeProvider } from "./context/EmployeeContext";
 import Auth from "./pages/Auth";
+import Register from "@/pages/Register";
 
 // Layouts
 import MainLayout from "./components/MainLayout";
@@ -105,6 +106,7 @@ const App = () => (
                     }
                   />
                 </Route>
+                <Route path="/register" element={<Register />} />
                 
                 {/* Catch-all route */}
                 <Route path="*" element={<NotFound />} />
