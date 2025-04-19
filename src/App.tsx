@@ -19,6 +19,7 @@ import TaskDetail from "./pages/TaskDetail";
 import CreateTask from "./pages/CreateTask";
 import Employees from "./pages/Employees";
 import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -84,6 +85,7 @@ const App = () => (
                   <Route path="tasks" element={<Tasks />} />
                   <Route path="tasks/:taskId" element={<TaskDetail />} />
                   <Route path="profile" element={<Profile />} />
+                  <Route path="settings" element={<Settings />} />
                   
                   {/* Admin-only routes */}
                   <Route
