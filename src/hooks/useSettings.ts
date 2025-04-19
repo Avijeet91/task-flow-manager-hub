@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Json } from "@/integrations/supabase/types";
 
 export interface UserSettings {
   darkMode: boolean;
@@ -38,11 +39,25 @@ export const useSettings = () => {
       if (error) throw error;
 
       if (data) {
+        // Handle type conversion properly
+        const fontSize = data.font_size as string;
+        const validFontSize: 'small' | 'medium' | 'large' = 
+          fontSize === 'small' || fontSize === 'large' ? fontSize : 'medium';
+          
+        // Parse the notifications to ensure correct typing
+        const notificationsData = data.notifications as Json;
+        const notifications = {
+          taskAssigned: Boolean(notificationsData?.taskAssigned ?? true),
+          taskUpdated: Boolean(notificationsData?.taskUpdated ?? true),
+          taskCompleted: Boolean(notificationsData?.taskCompleted ?? true),
+          commentAdded: Boolean(notificationsData?.commentAdded ?? true)
+        };
+        
         setSettings({
-          darkMode: data.dark_mode,
-          compactMode: data.compact_mode,
-          fontSize: data.font_size,
-          notifications: data.notifications
+          darkMode: Boolean(data.dark_mode),
+          compactMode: Boolean(data.compact_mode),
+          fontSize: validFontSize,
+          notifications
         });
       } else {
         // Create default settings if none exist

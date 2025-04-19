@@ -1,7 +1,8 @@
+
 import React from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/hooks/useSettings";
-import { Settings } from "lucide-react";
+import { Settings as SettingsIcon } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -28,6 +29,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch"; // Add this import for the Switch component
 import { useForm } from "react-hook-form";
 import { useEmployee } from "@/context/EmployeeContext";
 import { toast } from "sonner";
