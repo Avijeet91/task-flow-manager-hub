@@ -85,14 +85,15 @@ const Auth = () => {
       let employeeId = null;
       if (role === 'employee') {
         // Get the next sequence value for employee ID
-        const { data: seqData, error: seqError } = await supabase
+        const { data, error: seqError } = await supabase
           .rpc('next_employee_id_value');
           
         if (seqError) {
           console.error("Error getting employee ID:", seqError);
           employeeId = `EMP${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
         } else {
-          employeeId = `EMP${seqData.toString().padStart(3, '0')}`;
+          // Add a null check for the data value
+          employeeId = `EMP${(data !== null ? data : 1).toString().padStart(3, '0')}`;
         }
       }
 
