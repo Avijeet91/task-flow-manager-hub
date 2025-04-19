@@ -69,7 +69,19 @@ const Auth = () => {
     setIsRegistering(true);
     
     try {
-      const { data: { user }, error } = await supabase.auth.signUp({
+      // First check if user already exists to give a better error message
+      const { data: existingUsers } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('email', email);
+      
+      if (existingUsers && existingUsers.length > 0) {
+        toast.error("An account with this email already exists");
+        setIsRegistering(false);
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -82,13 +94,19 @@ const Auth = () => {
 
       if (error) throw error;
 
-      if (user) {
+      if (data.user) {
         toast.success("Registration successful! Please check your email to verify your account.");
         setActiveTab("login");
+        
+        // Clear registration form
+        setName("");
+        setEmail("");
+        setPassword("");
+        setRole("employee");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error);
-      toast.error("Failed to register");
+      toast.error(error.message || "Failed to register");
     } finally {
       setIsRegistering(false);
     }
