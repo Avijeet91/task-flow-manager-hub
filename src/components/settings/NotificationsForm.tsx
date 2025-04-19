@@ -80,7 +80,7 @@ const NotificationsForm: React.FC<NotificationsFormProps> = ({ initialValues, on
                   checked={field.value} 
                   onCheckedChange={field.onChange}
                 />
-              </Control>
+              </FormControl>
             </FormItem>
           )}
         />
