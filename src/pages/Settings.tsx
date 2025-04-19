@@ -1,8 +1,7 @@
-
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useEmployee } from "@/context/EmployeeContext";
-import { toast } from "sonner";
+import { useSettings } from "@/hooks/useSettings";
+import { Settings } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -16,6 +15,8 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import AppearanceForm from "@/components/settings/AppearanceForm";
+import NotificationsForm from "@/components/settings/NotificationsForm";
 import {
   Form,
   FormControl,
@@ -27,42 +28,19 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
-import { Settings } from "lucide-react";
-import { loadUserSettings, saveUserSettings, UserSettings } from "@/utils/settingsStorage";
+import { useEmployee } from "@/context/EmployeeContext";
+import { toast } from "sonner";
 
 const SettingsPage: React.FC = () => {
   const { user, isAdmin } = useAuth();
+  const { settings, loading, saveSettings } = useSettings();
   const { employees, updateEmployee } = useEmployee();
   
-  const [activeTab, setActiveTab] = useState("account");
-  const [userSettings, setUserSettings] = useState<UserSettings>({
-    darkMode: false,
-    compactMode: false,
-    fontSize: 'medium',
-    notifications: {
-      taskAssigned: true,
-      taskUpdated: true,
-      taskCompleted: true,
-      commentAdded: true,
-    }
-  });
-
-  // Load user settings on component mount
-  useEffect(() => {
-    if (user) {
-      const settings = loadUserSettings(user.id);
-      setUserSettings(settings);
-    }
-  }, [user]);
-
-  // Get current employee data if the user is an employee
   const currentEmployee = user?.employeeId 
     ? employees.find(emp => emp.employeeId === user.employeeId)
     : null;
 
-  // Form setup for account settings
   const accountForm = useForm({
     defaultValues: {
       name: user?.name || "",
@@ -71,27 +49,7 @@ const SettingsPage: React.FC = () => {
     },
   });
 
-  // Form setup for appearance settings
-  const appearanceForm = useForm({
-    defaultValues: {
-      compactMode: userSettings.compactMode || false,
-      darkMode: userSettings.darkMode || false,
-      fontSize: userSettings.fontSize || "medium",
-    },
-  });
-
-  // Update appearance form values when userSettings change
-  useEffect(() => {
-    appearanceForm.reset({
-      compactMode: userSettings.compactMode || false,
-      darkMode: userSettings.darkMode || false,
-      fontSize: userSettings.fontSize || "medium",
-    });
-  }, [userSettings, appearanceForm]);
-
-  // Handle account settings submission
   const onAccountSubmit = (data: any) => {
-    // In a real app, this would update user data in the backend
     if (currentEmployee && user?.employeeId) {
       updateEmployee(user.employeeId, {
         name: data.name,
@@ -103,42 +61,30 @@ const SettingsPage: React.FC = () => {
       toast.success("Account settings would be updated (mock)");
     }
   };
-
-  // Handle appearance settings submission
-  const onAppearanceSubmit = (data: any) => {
-    if (user) {
-      const updatedSettings = {
-        ...userSettings,
-        darkMode: data.darkMode,
-        compactMode: data.compactMode,
-        fontSize: data.fontSize,
-      };
-      saveUserSettings(user.id, updatedSettings);
-      setUserSettings(updatedSettings);
-      toast.success("Appearance settings updated successfully");
+  
+  const handleAppearanceSubmit = (values: any) => {
+    if (settings) {
+      saveSettings({
+        ...settings,
+        darkMode: values.darkMode,
+        compactMode: values.compactMode,
+        fontSize: values.fontSize,
+      });
     }
   };
 
-  // Handle notification toggle
-  const toggleNotification = (key: string) => {
-    if (!user) return;
-    
-    const updatedNotifications = {
-      ...userSettings.notifications,
-      [key]: !userSettings.notifications?.[key as keyof typeof userSettings.notifications],
-    };
-    
-    const updatedSettings = {
-      ...userSettings,
-      notifications: updatedNotifications,
-    };
-    
-    saveUserSettings(user.id, updatedSettings);
-    setUserSettings(updatedSettings);
-    
-    const isEnabled = !userSettings.notifications?.[key as keyof typeof userSettings.notifications];
-    toast.success(`${key} notifications ${isEnabled ? "enabled" : "disabled"}`);
+  const handleNotificationsSubmit = (values: any) => {
+    if (settings) {
+      saveSettings({
+        ...settings,
+        notifications: values.notifications,
+      });
+    }
   };
+
+  if (loading || !settings) {
+    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+  }
 
   return (
     <div className="container max-w-4xl py-6">
@@ -147,7 +93,7 @@ const SettingsPage: React.FC = () => {
         <h1 className="text-3xl font-bold">Settings</h1>
       </div>
 
-      <Tabs defaultValue="account" value={activeTab} onValueChange={setActiveTab}>
+      <Tabs defaultValue="account">
         <TabsList className="mb-6">
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
@@ -155,7 +101,6 @@ const SettingsPage: React.FC = () => {
           {isAdmin && <TabsTrigger value="system">System</TabsTrigger>}
         </TabsList>
 
-        {/* Account Settings */}
         <TabsContent value="account">
           <Card>
             <CardHeader>
@@ -216,7 +161,6 @@ const SettingsPage: React.FC = () => {
           </Card>
         </TabsContent>
 
-        {/* Notification Settings */}
         <TabsContent value="notifications">
           <Card>
             <CardHeader>
@@ -226,64 +170,14 @@ const SettingsPage: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">Task Assigned</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Notify when a new task is assigned to you
-                    </p>
-                  </div>
-                  <Switch 
-                    checked={userSettings.notifications?.taskAssigned} 
-                    onCheckedChange={() => toggleNotification("taskAssigned")} 
-                  />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">Task Updated</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Notify when a task you're assigned to is updated
-                    </p>
-                  </div>
-                  <Switch 
-                    checked={userSettings.notifications?.taskUpdated} 
-                    onCheckedChange={() => toggleNotification("taskUpdated")} 
-                  />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">Task Completed</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Notify when a task is marked as completed
-                    </p>
-                  </div>
-                  <Switch 
-                    checked={userSettings.notifications?.taskCompleted} 
-                    onCheckedChange={() => toggleNotification("taskCompleted")} 
-                  />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">Comments</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Notify when someone comments on your tasks
-                    </p>
-                  </div>
-                  <Switch 
-                    checked={userSettings.notifications?.commentAdded} 
-                    onCheckedChange={() => toggleNotification("commentAdded")} 
-                  />
-                </div>
-              </div>
+              <NotificationsForm
+                initialValues={{ notifications: settings.notifications }}
+                onSubmit={handleNotificationsSubmit}
+              />
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Appearance Settings */}
         <TabsContent value="appearance">
           <Card>
             <CardHeader>
@@ -293,58 +187,18 @@ const SettingsPage: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Form {...appearanceForm}>
-                <form onSubmit={appearanceForm.handleSubmit(onAppearanceSubmit)} className="space-y-4">
-                  <FormField
-                    control={appearanceForm.control}
-                    name="darkMode"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between">
-                        <div>
-                          <FormLabel>Dark Mode</FormLabel>
-                          <FormDescription>
-                            Switch between light and dark theme
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch 
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={appearanceForm.control}
-                    name="compactMode"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between">
-                        <div>
-                          <FormLabel>Compact Mode</FormLabel>
-                          <FormDescription>
-                            Use a more compact layout to fit more content
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch 
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <Button type="submit">Save Preferences</Button>
-                </form>
-              </Form>
+              <AppearanceForm
+                initialValues={{
+                  darkMode: settings.darkMode,
+                  compactMode: settings.compactMode,
+                  fontSize: settings.fontSize,
+                }}
+                onSubmit={handleAppearanceSubmit}
+              />
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* System Settings (Admin Only) */}
         {isAdmin && (
           <TabsContent value="system">
             <Card>

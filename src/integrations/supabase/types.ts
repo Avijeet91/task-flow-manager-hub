@@ -9,7 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      user_settings: {
+        Row: {
+          compact_mode: boolean | null
+          created_at: string | null
+          dark_mode: boolean | null
+          font_size: string | null
+          id: string
+          notifications: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          compact_mode?: boolean | null
+          created_at?: string | null
+          dark_mode?: boolean | null
+          font_size?: string | null
+          id?: string
+          notifications?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          compact_mode?: boolean | null
+          created_at?: string | null
+          dark_mode?: boolean | null
+          font_size?: string | null
+          id?: string
+          notifications?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
