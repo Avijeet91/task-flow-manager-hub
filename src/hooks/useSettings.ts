@@ -25,16 +25,46 @@ export const useSettings = () => {
   useEffect(() => {
     if (user) {
       loadSettings();
+    } else {
+      // If no user, set default settings to avoid UI issues
+      setSettings({
+        darkMode: false,
+        compactMode: false,
+        fontSize: 'medium',
+        notifications: {
+          taskAssigned: true,
+          taskUpdated: true,
+          taskCompleted: true,
+          commentAdded: true
+        }
+      });
+      setLoading(false);
     }
   }, [user]);
 
   const loadSettings = async () => {
     try {
+      if (!user?.id) {
+        throw new Error("User ID is undefined");
+      }
+
+      // Validate that user.id is a valid UUID
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
+      
+      if (!isValidUUID) {
+        console.warn(`Invalid UUID format for user.id: ${user.id}. Using local settings instead.`);
+        // Use localStorage fallback
+        const localSettings = loadLocalSettings();
+        setSettings(localSettings);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('user_settings')
         .select('*')
-        .eq('user_id', user?.id)
-        .single();
+        .eq('user_id', user.id)
+        .maybeSingle();
 
       if (error) throw error;
 
@@ -67,12 +97,15 @@ export const useSettings = () => {
           };
         }
         
-        setSettings({
+        const userSettings = {
           darkMode: Boolean(data.dark_mode),
           compactMode: Boolean(data.compact_mode),
           fontSize: validFontSize,
           notifications
-        });
+        };
+        
+        setSettings(userSettings);
+        saveLocalSettings(userSettings);
       } else {
         // Create default settings if none exist
         const defaultSettings = {
@@ -86,12 +119,22 @@ export const useSettings = () => {
             commentAdded: true
           }
         };
-        await saveSettings(defaultSettings);
+        
+        // Try to save to database if we have a valid user ID
+        if (isValidUUID) {
+          await saveSettings(defaultSettings);
+        }
+        
         setSettings(defaultSettings);
+        saveLocalSettings(defaultSettings);
       }
     } catch (error) {
       console.error('Error loading settings:', error);
       toast.error('Failed to load settings');
+      
+      // Fallback to local settings
+      const localSettings = loadLocalSettings();
+      setSettings(localSettings);
     } finally {
       setLoading(false);
     }
@@ -101,6 +144,17 @@ export const useSettings = () => {
     if (!user) return;
 
     try {
+      // Check if UUID is valid before attempting to save to database
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
+      
+      if (!isValidUUID) {
+        console.warn(`Invalid UUID format for user.id: ${user.id}. Saving to localStorage only.`);
+        saveLocalSettings(newSettings);
+        setSettings(newSettings);
+        toast.success('Settings saved locally');
+        return;
+      }
+
       const { error } = await supabase
         .from('user_settings')
         .upsert({
@@ -114,10 +168,47 @@ export const useSettings = () => {
       if (error) throw error;
 
       setSettings(newSettings);
+      saveLocalSettings(newSettings);
       toast.success('Settings saved successfully');
     } catch (error) {
       console.error('Error saving settings:', error);
-      toast.error('Failed to save settings');
+      toast.error('Failed to save settings to database, but saved locally');
+      
+      // Always save locally as fallback
+      saveLocalSettings(newSettings);
+      setSettings(newSettings);
+    }
+  };
+
+  // Local storage functions for fallback
+  const loadLocalSettings = (): UserSettings => {
+    try {
+      const storedSettings = localStorage.getItem('user_settings');
+      if (storedSettings) {
+        return JSON.parse(storedSettings);
+      }
+    } catch (error) {
+      console.error('Error loading settings from localStorage:', error);
+    }
+    
+    return {
+      darkMode: false,
+      compactMode: false,
+      fontSize: 'medium',
+      notifications: {
+        taskAssigned: true,
+        taskUpdated: true,
+        taskCompleted: true,
+        commentAdded: true
+      }
+    };
+  };
+
+  const saveLocalSettings = (settings: UserSettings): void => {
+    try {
+      localStorage.setItem('user_settings', JSON.stringify(settings));
+    } catch (error) {
+      console.error('Error saving settings to localStorage:', error);
     }
   };
 

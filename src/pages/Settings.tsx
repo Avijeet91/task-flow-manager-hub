@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch"; // Add this import for the Switch component
+import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { useEmployee } from "@/context/EmployeeContext";
 import { toast } from "sonner";
@@ -84,8 +84,13 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-  if (loading || !settings) {
+  if (loading) {
     return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+  }
+
+  // Ensure we have settings before rendering the form components
+  if (!settings) {
+    return <div className="flex justify-center items-center min-h-screen">Error loading settings</div>;
   }
 
   return (
