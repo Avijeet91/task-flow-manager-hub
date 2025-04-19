@@ -46,11 +46,17 @@ export const useSettings = () => {
           
         // Parse the notifications to ensure correct typing
         const notificationsData = data.notifications as Json;
+        
+        // Need to safely access properties as Json could be a string or object
         const notifications = {
-          taskAssigned: Boolean(notificationsData?.taskAssigned ?? true),
-          taskUpdated: Boolean(notificationsData?.taskUpdated ?? true),
-          taskCompleted: Boolean(notificationsData?.taskCompleted ?? true),
-          commentAdded: Boolean(notificationsData?.commentAdded ?? true)
+          taskAssigned: typeof notificationsData === 'object' && notificationsData !== null ? 
+            Boolean(notificationsData.taskAssigned) : true,
+          taskUpdated: typeof notificationsData === 'object' && notificationsData !== null ? 
+            Boolean(notificationsData.taskUpdated) : true,
+          taskCompleted: typeof notificationsData === 'object' && notificationsData !== null ? 
+            Boolean(notificationsData.taskCompleted) : true,
+          commentAdded: typeof notificationsData === 'object' && notificationsData !== null ? 
+            Boolean(notificationsData.commentAdded) : true
         };
         
         setSettings({

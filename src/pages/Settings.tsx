@@ -91,7 +91,7 @@ const SettingsPage: React.FC = () => {
   return (
     <div className="container max-w-4xl py-6">
       <div className="mb-6 flex items-center gap-2">
-        <Settings className="h-6 w-6" />
+        <SettingsIcon className="h-6 w-6" />
         <h1 className="text-3xl font-bold">Settings</h1>
       </div>
 
