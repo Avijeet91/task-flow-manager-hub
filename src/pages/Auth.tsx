@@ -81,6 +81,7 @@ const Auth = () => {
         return;
       }
 
+      // Register the user
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -95,6 +96,22 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.user) {
+        // Manually create the profile in case the database trigger hasn't fired yet
+        // This ensures the profile is created even if there's an issue with the trigger
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            email: email,
+            name: name,
+            role: role,
+          }, { onConflict: 'id' });
+
+        if (profileError) {
+          console.error("Error creating profile:", profileError);
+          // We don't throw here because the user is already created
+        }
+
         toast.success("Registration successful! Please check your email to verify your account.");
         setActiveTab("login");
         
