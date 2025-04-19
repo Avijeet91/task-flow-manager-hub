@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { TaskProvider } from "./context/TaskContext";
 import { EmployeeProvider } from "./context/EmployeeContext";
+import Auth from "./pages/Auth";
 
 // Layouts
 import MainLayout from "./components/MainLayout";
@@ -69,8 +69,8 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 {/* Public Routes */}
-                <Route path="/login" element={<Login />} />
-                <Route path="/" element={<Navigate to="/login" replace />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={<Navigate to="/auth" replace />} />
                 
                 {/* Protected Routes inside MainLayout */}
                 <Route
