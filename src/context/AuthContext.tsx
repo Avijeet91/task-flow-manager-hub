@@ -28,19 +28,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Set up auth state listener
   useEffect(() => {
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
           try {
-            const { data: profile } = await supabase
+            const { data: profile, error } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', session.user.id)
               .single();
 
-            if (profile) {
+            if (error) {
+              console.error("Error fetching profile:", error);
+              setUser(null);
+            } else if (profile) {
               setUser({
                 id: session.user.id,
                 name: profile.name,
@@ -51,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           } catch (error) {
             console.error('Error fetching user profile:', error);
+            setUser(null);
           }
         } else {
           setUser(null);
@@ -59,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Check current session
+    // Check current session on load
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         supabase
@@ -76,6 +80,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 role: profile.role as UserRole,
                 employeeId: profile.employee_id,
               });
+            } else {
+              console.error("Error fetching initial profile:", error);
             }
             setIsLoading(false);
           });
@@ -101,7 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       toast.success("Login successful!");
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error logging in:', error);
       toast.error("Invalid email or password");
       return false;
