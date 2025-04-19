@@ -54,22 +54,8 @@ const Auth = () => {
         return;
       }
 
-      // Create a new employee ID if role is employee
-      let employeeId = null;
-      if (data.role === 'employee') {
-        const { data: seqData, error: seqError } = await supabase
-          .rpc('next_employee_id_value');
-          
-        if (seqError) {
-          console.error("Error getting employee ID:", seqError);
-          employeeId = `EMP${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
-        } else {
-          employeeId = `EMP${(seqData !== null ? seqData : 1).toString().padStart(3, '0')}`;
-        }
-      }
-
-      // Register the user
-      const { data: userData, error } = await supabase.auth.signUp({
+      // Register the user with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
@@ -80,30 +66,11 @@ const Auth = () => {
         }
       });
 
-      if (error) throw error;
+      if (authError) throw authError;
 
-      if (userData.user) {
-        // Manually create the profile record
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: userData.user.id,
-            email: data.email,
-            name: data.name,
-            role: data.role,
-            employee_id: employeeId,
-          }, { onConflict: 'id' });
-
-        if (profileError) {
-          console.error("Error creating profile:", profileError);
-          toast.error("Account created but profile setup failed. Please contact support.");
-        } else {
-          toast.success("Registration successful! Please check your email to verify your account.");
-          setActiveTab("login");
-          
-          // Clear registration form by resetting the tab
-          setActiveTab("login");
-        }
+      if (authData.user) {
+        toast.success("Registration successful! Please check your email to verify your account.");
+        setActiveTab("login");
       }
     } catch (error: any) {
       console.error("Registration error:", error);
