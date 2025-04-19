@@ -47,17 +47,25 @@ export const useSettings = () => {
         // Parse the notifications to ensure correct typing
         const notificationsData = data.notifications as Json;
         
-        // Need to safely access properties as Json could be a string or object
-        const notifications = {
-          taskAssigned: typeof notificationsData === 'object' && notificationsData !== null ? 
-            Boolean(notificationsData.taskAssigned) : true,
-          taskUpdated: typeof notificationsData === 'object' && notificationsData !== null ? 
-            Boolean(notificationsData.taskUpdated) : true,
-          taskCompleted: typeof notificationsData === 'object' && notificationsData !== null ? 
-            Boolean(notificationsData.taskCompleted) : true,
-          commentAdded: typeof notificationsData === 'object' && notificationsData !== null ? 
-            Boolean(notificationsData.commentAdded) : true
+        // Create a properly typed notifications object with safe defaults
+        let notifications = {
+          taskAssigned: true,
+          taskUpdated: true,
+          taskCompleted: true,
+          commentAdded: true
         };
+        
+        // Only try to extract values if notificationsData is a non-null object
+        if (notificationsData && typeof notificationsData === 'object' && !Array.isArray(notificationsData)) {
+          // Now TypeScript knows this is an object with string keys
+          const notifObj = notificationsData as Record<string, unknown>;
+          notifications = {
+            taskAssigned: typeof notifObj.taskAssigned === 'boolean' ? notifObj.taskAssigned : true,
+            taskUpdated: typeof notifObj.taskUpdated === 'boolean' ? notifObj.taskUpdated : true,
+            taskCompleted: typeof notifObj.taskCompleted === 'boolean' ? notifObj.taskCompleted : true,
+            commentAdded: typeof notifObj.commentAdded === 'boolean' ? notifObj.commentAdded : true
+          };
+        }
         
         setSettings({
           darkMode: Boolean(data.dark_mode),
