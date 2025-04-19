@@ -81,6 +81,21 @@ const Auth = () => {
         return;
       }
 
+      // Create a new employee ID if role is employee
+      let employeeId = null;
+      if (role === 'employee') {
+        // Get the next sequence value for employee ID
+        const { data: seqData, error: seqError } = await supabase
+          .rpc('next_employee_id_value');
+          
+        if (seqError) {
+          console.error("Error getting employee ID:", seqError);
+          employeeId = `EMP${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+        } else {
+          employeeId = `EMP${seqData.toString().padStart(3, '0')}`;
+        }
+      }
+
       // Register the user
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -96,8 +111,7 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.user) {
-        // Manually create the profile in case the database trigger hasn't fired yet
-        // This ensures the profile is created even if there's an issue with the trigger
+        // Manually create the profile record
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
@@ -105,21 +119,22 @@ const Auth = () => {
             email: email,
             name: name,
             role: role,
+            employee_id: employeeId,
           }, { onConflict: 'id' });
 
         if (profileError) {
           console.error("Error creating profile:", profileError);
-          // We don't throw here because the user is already created
+          toast.error("Account created but profile setup failed. Please contact support.");
+        } else {
+          toast.success("Registration successful! Please check your email to verify your account.");
+          setActiveTab("login");
+          
+          // Clear registration form
+          setName("");
+          setEmail("");
+          setPassword("");
+          setRole("employee");
         }
-
-        toast.success("Registration successful! Please check your email to verify your account.");
-        setActiveTab("login");
-        
-        // Clear registration form
-        setName("");
-        setEmail("");
-        setPassword("");
-        setRole("employee");
       }
     } catch (error: any) {
       console.error("Registration error:", error);

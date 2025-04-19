@@ -1,1 +1,5 @@
+
 project_id = "spwptlyleyrokvvmjbsw"
+
+[functions.next_employee_id]
+verify_jwt = true
