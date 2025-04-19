@@ -2,14 +2,10 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Card,
-  CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -19,42 +15,20 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import {
-  Mail,
-  Key,
-  UserPlus,
-  LogIn,
-} from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import LoginForm from "@/components/auth/LoginForm";
+import RegisterForm from "@/components/auth/RegisterForm";
+import { LoginFormData, RegisterFormData } from "@/types/auth";
 
 const Auth = () => {
   const navigate = useNavigate();
   const { login, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
-  
-  // Login state
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  
-  // Register state
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("employee");
   const [isRegistering, setIsRegistering] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (data: LoginFormData) => {
     try {
-      const success = await login(loginEmail, loginPassword);
+      const success = await login(data.email, data.password);
       if (success) {
         navigate("/dashboard");
       }
@@ -64,16 +38,15 @@ const Auth = () => {
     }
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRegister = async (data: RegisterFormData) => {
     setIsRegistering(true);
     
     try {
-      // First check if user already exists to give a better error message
+      // First check if user already exists
       const { data: existingUsers } = await supabase
         .from('profiles')
         .select('email')
-        .eq('email', email);
+        .eq('email', data.email);
       
       if (existingUsers && existingUsers.length > 0) {
         toast.error("An account with this email already exists");
@@ -83,43 +56,41 @@ const Auth = () => {
 
       // Create a new employee ID if role is employee
       let employeeId = null;
-      if (role === 'employee') {
-        // Get the next sequence value for employee ID
-        const { data, error: seqError } = await supabase
+      if (data.role === 'employee') {
+        const { data: seqData, error: seqError } = await supabase
           .rpc('next_employee_id_value');
           
         if (seqError) {
           console.error("Error getting employee ID:", seqError);
           employeeId = `EMP${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
         } else {
-          // Add a null check for the data value
-          employeeId = `EMP${(data !== null ? data : 1).toString().padStart(3, '0')}`;
+          employeeId = `EMP${(seqData !== null ? seqData : 1).toString().padStart(3, '0')}`;
         }
       }
 
       // Register the user
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
+      const { data: userData, error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
         options: {
           data: {
-            name,
-            role,
+            name: data.name,
+            role: data.role,
           }
         }
       });
 
       if (error) throw error;
 
-      if (data.user) {
+      if (userData.user) {
         // Manually create the profile record
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
-            id: data.user.id,
-            email: email,
-            name: name,
-            role: role,
+            id: userData.user.id,
+            email: data.email,
+            name: data.name,
+            role: data.role,
             employee_id: employeeId,
           }, { onConflict: 'id' });
 
@@ -130,11 +101,8 @@ const Auth = () => {
           toast.success("Registration successful! Please check your email to verify your account.");
           setActiveTab("login");
           
-          // Clear registration form
-          setName("");
-          setEmail("");
-          setPassword("");
-          setRole("employee");
+          // Clear registration form by resetting the tab
+          setActiveTab("login");
         }
       }
     } catch (error: any) {
@@ -163,107 +131,11 @@ const Auth = () => {
             </TabsList>
 
             <TabsContent value="login">
-              <form onSubmit={handleLogin}>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                      <Input
-                        type="email"
-                        placeholder="Email"
-                        className="pl-10"
-                        value={loginEmail}
-                        onChange={(e) => setLoginEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <Key className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                      <Input
-                        type="password"
-                        placeholder="Password"
-                        className="pl-10"
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isLoading}
-                  >
-                    <LogIn className="mr-2 h-4 w-4" />
-                    {isLoading ? "Signing in..." : "Sign In"}
-                  </Button>
-                </CardFooter>
-              </form>
+              <LoginForm onSubmit={handleLogin} isLoading={isLoading} />
             </TabsContent>
 
             <TabsContent value="register">
-              <form onSubmit={handleRegister}>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Name</Label>
-                    <Input
-                      id="name"
-                      placeholder="Full Name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="role">Role</Label>
-                    <Select value={role} onValueChange={setRole}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="employee">Employee</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isRegistering}
-                  >
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    {isRegistering ? "Creating Account..." : "Create Account"}
-                  </Button>
-                </CardFooter>
-              </form>
+              <RegisterForm onSubmit={handleRegister} isRegistering={isRegistering} />
             </TabsContent>
           </Tabs>
         </Card>
