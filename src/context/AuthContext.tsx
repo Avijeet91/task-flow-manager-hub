@@ -60,8 +60,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } as ExtendedUser;
           setUser(extendedUser);
           
-          await fetchUserProfile(newSession.user.id);
-          await fetchUserRoles(newSession.user.id);
+          // Defer profile fetching to avoid blocking auth flow
+          setTimeout(() => {
+            fetchUserProfile(newSession.user.id);
+            fetchUserRoles(newSession.user.id);
+          }, 0);
         } else {
           setUser(null);
           setProfile(null);
@@ -72,21 +75,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Then check for existing session
     const initializeAuth = async () => {
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      
-      if (initialSession?.user) {
-        // Create extended user with the properties our app expects
-        const extendedUser = {
-          ...initialSession.user
-        } as ExtendedUser;
-        setUser(extendedUser);
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        setSession(initialSession);
         
-        await fetchUserProfile(initialSession.user.id);
-        await fetchUserRoles(initialSession.user.id);
+        if (initialSession?.user) {
+          // Create extended user with the properties our app expects
+          const extendedUser = {
+            ...initialSession.user
+          } as ExtendedUser;
+          setUser(extendedUser);
+          
+          await fetchUserProfile(initialSession.user.id);
+          await fetchUserRoles(initialSession.user.id);
+        }
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+      } finally {
+        // Always set loading to false even if there are errors
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
 
     initializeAuth();
@@ -150,12 +158,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error("Error in fetchUserRoles:", error);
+    } finally {
+      // Set loading to false after roles have been fetched
+      // This ensures we have all the necessary data before proceeding
+      setIsLoading(false);
     }
   };
 
   // Login function
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
+      setIsLoading(true);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -163,6 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         toast.error(error.message);
+        setIsLoading(false);
         return false;
       }
 
@@ -171,6 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       console.error("Login error:", error);
       toast.error("An error occurred during login");
+      setIsLoading(false);
       return false;
     }
   };
@@ -182,6 +197,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userData: Record<string, any>
   ): Promise<boolean> => {
     try {
+      setIsLoading(true);
       // Generate a unique employee ID
       const employeeId = userData.employeeId || `EMP${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
       
@@ -201,6 +217,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         toast.error(error.message);
+        setIsLoading(false);
         return false;
       }
 
@@ -220,10 +237,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       toast.success("Registration successful! Please verify your email.");
+      setIsLoading(false);
       return true;
     } catch (error: any) {
       console.error("Signup error:", error);
       toast.error("An error occurred during signup");
+      setIsLoading(false);
       return false;
     }
   };
@@ -231,6 +250,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Logout function
   const logout = async () => {
     try {
+      setIsLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) {
         throw error;
@@ -239,6 +259,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       console.error("Logout error:", error);
       toast.error("An error occurred during logout");
+    } finally {
+      setIsLoading(false);
     }
   };
 
