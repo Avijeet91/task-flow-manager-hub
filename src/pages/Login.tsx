@@ -6,11 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock, Mail } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [creatingDemoUser, setCreatingDemoUser] = useState(false);
   const { login, isLoading, user, session } = useAuth();
   const navigate = useNavigate();
 
@@ -31,6 +34,27 @@ const Login = () => {
       }
     } finally {
       setIsLoggingIn(false);
+    }
+  };
+
+  const createDemoAdminUser = async () => {
+    try {
+      setCreatingDemoUser(true);
+      const response = await fetch('/api/ensure-admin-user');
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast.success("Demo admin user is ready");
+        setEmail("admin@example.com");
+        setPassword("admin123");
+      } else {
+        toast.error(data.error || "Failed to create demo user");
+      }
+    } catch (error) {
+      console.error("Error creating demo user:", error);
+      toast.error("An error occurred while setting up demo user");
+    } finally {
+      setCreatingDemoUser(false);
     }
   };
 
@@ -93,6 +117,15 @@ const Login = () => {
                 disabled={isLoggingIn || isLoading}
               >
                 {isLoggingIn ? "Signing in..." : "Sign In"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={createDemoAdminUser}
+                disabled={creatingDemoUser}
+              >
+                {creatingDemoUser ? "Setting up demo user..." : "Create demo admin user"}
               </Button>
               <Button
                 type="button"
