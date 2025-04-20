@@ -70,6 +70,7 @@ const App = () => (
               <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
                 <Route path="/" element={<Navigate to="/login" replace />} />
                 
                 {/* Protected Routes inside MainLayout */}

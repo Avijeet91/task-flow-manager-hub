@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -14,7 +13,6 @@ const Login = () => {
   const { login, isLoading, user } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if already logged in
   useEffect(() => {
     if (user) {
       navigate("/dashboard");
@@ -87,13 +85,21 @@ const Login = () => {
                 </p>
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex flex-col space-y-4">
               <Button
                 type="submit"
                 className="w-full"
                 disabled={isLoggingIn || isLoading}
               >
                 {isLoggingIn ? "Signing in..." : "Sign In"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => navigate("/register")}
+              >
+                Don't have an account? Register
               </Button>
             </CardFooter>
           </form>
