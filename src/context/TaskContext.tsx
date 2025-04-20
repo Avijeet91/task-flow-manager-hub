@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { toast } from "sonner";
@@ -130,13 +131,19 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const effectiveEmployeeId = employeeId || user.employeeId || profile?.employee_id;
       console.log("Using effective employee ID for filtering:", effectiveEmployeeId);
       
-      // Add more flexible matching for employee tasks
+      // Add more flexible matching for employee tasks - the key fix is here!
       const employeeTasks = tasks.filter((task) => {
-        // Match by user ID if that's how it was assigned
+        // Check if the task is assigned to this user's ID directly (UUID format)
         if (task.assignedTo === user.id) return true;
         
-        // Match by employee ID if available
+        // Check if the task is assigned to the employee ID
         if (effectiveEmployeeId && task.assignedTo === effectiveEmployeeId) return true;
+        
+        // Check if the task assignedTo matches the profile's employee_id
+        if (profile?.employee_id && task.assignedTo === profile.employee_id) return true;
+        
+        // Check if assignedTo contains part of the user's email (as a fallback)
+        if (user.email && task.assignedTo.includes(user.email.split('@')[0])) return true;
         
         return false;
       });

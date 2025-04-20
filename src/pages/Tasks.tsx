@@ -17,13 +17,19 @@ import TaskDebugInfo from "@/components/TaskDebugInfo";
 import { Plus, Search, Filter } from "lucide-react";
 
 const Tasks = () => {
-  const { getUserTasks, fetchTasks } = useTask();
+  const { getUserTasks, fetchTasks, tasks } = useTask();
   const { isAdmin, user, profile } = useAuth();
   const navigate = useNavigate();
   
   useEffect(() => {
     // Refresh tasks when component mounts
     fetchTasks();
+    
+    // Log debug info to help diagnose task assignment issues
+    console.log("Current user:", user);
+    console.log("Current profile:", profile);
+    console.log("Is admin:", isAdmin);
+    console.log("All tasks:", tasks);
   }, []);
   
   const allTasks = getUserTasks();
