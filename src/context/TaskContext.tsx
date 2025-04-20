@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { toast } from "sonner";
@@ -47,7 +46,7 @@ const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -67,6 +66,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (tasksError) throw tasksError;
       if (!tasksData) return;
 
+      console.log("Fetched tasks:", tasksData);
+      
       const { data: commentsData, error: commentsError } = await supabase
         .from('task_comments')
         .select('*')
@@ -111,13 +112,37 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const getUserTasks = (employeeId?: string) => {
     if (!user) return [];
 
+    // For debugging
+    console.log("Getting tasks for user:", user);
+    console.log("User profile:", profile);
+    console.log("User role:", user.role);
+    console.log("Employee ID from params:", employeeId);
+    console.log("User employee ID:", user.employeeId);
+    console.log("Profile employee ID:", profile?.employee_id);
+    console.log("All tasks:", tasks);
+
     if (user.role === "admin") {
       return employeeId
         ? tasks.filter((task) => task.assignedTo === employeeId)
         : tasks;
     } else {
-      // Use the user.employeeId property from our extended user
-      return tasks.filter((task) => task.assignedTo === user.employeeId);
+      // Use either the employeeId parameter, user.employeeId, or profile.employee_id
+      const effectiveEmployeeId = employeeId || user.employeeId || profile?.employee_id;
+      console.log("Using effective employee ID for filtering:", effectiveEmployeeId);
+      
+      // Add more flexible matching for employee tasks
+      const employeeTasks = tasks.filter((task) => {
+        // Match by user ID if that's how it was assigned
+        if (task.assignedTo === user.id) return true;
+        
+        // Match by employee ID if available
+        if (effectiveEmployeeId && task.assignedTo === effectiveEmployeeId) return true;
+        
+        return false;
+      });
+      
+      console.log("Filtered employee tasks:", employeeTasks);
+      return employeeTasks;
     }
   };
 

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,12 +13,19 @@ import {
 import { useTask, TaskStatus } from "@/context/TaskContext";
 import { useAuth } from "@/context/AuthContext";
 import TaskCard from "@/components/TaskCard";
+import TaskDebugInfo from "@/components/TaskDebugInfo";
 import { Plus, Search, Filter } from "lucide-react";
 
 const Tasks = () => {
-  const { getUserTasks } = useTask();
-  const { isAdmin } = useAuth();
+  const { getUserTasks, fetchTasks } = useTask();
+  const { isAdmin, user, profile } = useAuth();
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Refresh tasks when component mounts
+    fetchTasks();
+  }, []);
+  
   const allTasks = getUserTasks();
   
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,6 +78,9 @@ const Tasks = () => {
           </Button>
         )}
       </div>
+
+      {/* Debug info - will only show in development mode */}
+      <TaskDebugInfo />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="relative md:col-span-2">

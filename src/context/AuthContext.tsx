@@ -107,6 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // This effect updates the extended user properties after profile and roles are fetched
   useEffect(() => {
     if (user && profile) {
+      console.log("Updating extended user with profile:", profile);
       setUser(prevUser => {
         if (!prevUser) return null;
         
@@ -134,6 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data) {
+        console.log("Fetched user profile:", data);
         setProfile(data as UserProfile);
       }
     } catch (error) {
