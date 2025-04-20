@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { toast } from "sonner";
@@ -49,55 +48,33 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [tasks, setTasks] = useState<Task[]>([]);
   const { user } = useAuth();
 
-  // Load tasks from database on initial load
   useEffect(() => {
     if (user) {
       fetchTasks();
     }
   }, [user]);
 
-  // Fetch tasks and comments from the database
   const fetchTasks = async () => {
     try {
       if (!user) return;
       
-      // Fetch tasks from the database
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (tasksError) {
-        throw tasksError;
-      }
-      
-      if (!tasksData) {
-        return;
-      }
-      
-      // Fetch all comments for tasks
+      if (tasksError) throw tasksError;
+      if (!tasksData) return;
+
       const { data: commentsData, error: commentsError } = await supabase
         .from('task_comments')
         .select('*')
         .order('created_at');
       
-      if (commentsError) {
-        throw commentsError;
-      }
-      
-      // Map data to our interface format
+      if (commentsError) throw commentsError;
+
       const formattedTasks: Task[] = tasksData.map((task) => {
-        // Find all comments for this task
-        const taskComments = commentsData?.filter((comment) => comment.task_id === task.id) || [];
-        
-        // Map comments to our interface format
-        const formattedComments = taskComments.map((comment) => ({
-          id: comment.id,
-          userId: comment.user_id,
-          userName: comment.user_name,
-          text: comment.text,
-          createdAt: comment.created_at
-        }));
+        const taskComments = commentsData?.filter(c => c.task_id === task.id) || [];
         
         return {
           id: task.id,
@@ -113,7 +90,13 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
           dueDate: task.due_date,
           completedAt: task.completed_at,
           progress: task.progress,
-          comments: formattedComments
+          comments: taskComments.map(comment => ({
+            id: comment.id,
+            userId: comment.user_id,
+            userName: comment.user_name,
+            text: comment.text,
+            createdAt: comment.created_at
+          }))
         };
       });
       
@@ -124,27 +107,22 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Get all tasks for the current user
   const getUserTasks = (employeeId?: string) => {
     if (!user) return [];
 
     if (user.role === "admin") {
-      // If an employeeId is provided, filter tasks for that employee
       return employeeId
         ? tasks.filter((task) => task.assignedTo === employeeId)
         : tasks;
     } else {
-      // For employees, only show their assigned tasks
       return tasks.filter((task) => task.assignedTo === user.employeeId);
     }
   };
 
-  // Get a specific task by ID
   const getTaskById = (taskId: string) => {
     return tasks.find((task) => task.id === taskId);
   };
 
-  // Add a new task
   const addTask = async (task: Omit<Task, "id" | "createdAt" | "comments">) => {
     if (!user || user.role !== "admin") {
       toast.error("Only admins can create tasks");
@@ -152,7 +130,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      // Insert task into database
       const { data, error } = await supabase
         .from('tasks')
         .insert({
@@ -201,10 +178,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Update a task
   const updateTask = async (taskId: string, updates: Partial<Task>) => {
     try {
-      // Determine if status is changing to completed
       const isCompletingTask = updates.status === "completed";
       const currentTask = tasks.find(t => t.id === taskId);
       
@@ -213,7 +188,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
-      // Map our interface fields to database fields
       const dbUpdates: any = {};
       if (updates.title) dbUpdates.title = updates.title;
       if (updates.description !== undefined) dbUpdates.description = updates.description;
@@ -227,7 +201,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         dbUpdates.progress = updates.progress;
       }
       
-      // Update task in database
       const { error } = await supabase
         .from('tasks')
         .update(dbUpdates)
@@ -237,7 +210,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
-      // Update local state with processed updates
       const finalUpdates = {
         ...updates,
         completedAt: isCompletingTask ? new Date().toISOString() : updates.completedAt,
@@ -257,7 +229,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Update task progress
   const updateTaskProgress = async (taskId: string, progress: number) => {
     if (progress < 0 || progress > 100) {
       toast.error("Progress must be between 0 and 100");
@@ -265,14 +236,12 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      // Get current task to determine status changes
       const currentTask = tasks.find(task => task.id === taskId);
       if (!currentTask) {
         toast.error("Task not found");
         return;
       }
 
-      // Determine if status needs to change based on progress
       let newStatus = currentTask.status;
       let completedAt = currentTask.completedAt;
       
@@ -283,7 +252,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         newStatus = "in_progress";
       }
 
-      // Update task in database
       const { error } = await supabase
         .from('tasks')
         .update({
@@ -297,7 +265,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
-      // Update local state
       setTasks(prevTasks =>
         prevTasks.map(task =>
           task.id === taskId
@@ -320,12 +287,10 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Add a comment to a task
   const addTaskComment = async (taskId: string, commentText: string) => {
     if (!user) return;
 
     try {
-      // Insert comment into database
       const { data, error } = await supabase
         .from('task_comments')
         .insert({
@@ -350,7 +315,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
           createdAt: data.created_at
         };
 
-        // Update local state
         setTasks(prevTasks =>
           prevTasks.map(task =>
             task.id === taskId
@@ -367,7 +331,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Delete a task
   const deleteTask = async (taskId: string) => {
     if (!user || user.role !== "admin") {
       toast.error("Only admins can delete tasks");
@@ -375,7 +338,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      // Delete task from database
       const { error } = await supabase
         .from('tasks')
         .delete()
@@ -385,7 +347,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
-      // Update local state
       setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
       toast.success("Task deleted");
     } catch (error) {
@@ -413,7 +374,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-// Custom hook to use task context
 export const useTask = () => {
   const context = useContext(TaskContext);
   if (context === undefined) {

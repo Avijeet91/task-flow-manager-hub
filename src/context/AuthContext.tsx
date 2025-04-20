@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,22 +47,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
-      // Get employee from the database using a SQL query
-      const { data, error } = await supabase
+      // Get employee from the employees table
+      const { data: employees, error } = await supabase
         .from('employees')
         .select('*')
         .eq('email', email)
         .limit(1)
         .single();
       
-      if (error || !data) {
+      if (error || !employees) {
         toast.error("Invalid email or password");
         setIsLoading(false);
         return false;
       }
 
       // Compare password
-      const passwordMatch = await bcrypt.compare(password, data.password);
+      const passwordMatch = await bcrypt.compare(password, employees.password);
       
       if (!passwordMatch) {
         toast.error("Invalid email or password");
@@ -73,18 +72,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Create user object from employee data
       const userObj: User = {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        role: data.position === 'Administrator' ? 'admin' : 'employee',
-        employeeId: data.employee_id
+        id: employees.id,
+        name: employees.name,
+        email: employees.email,
+        role: employees.position === 'Administrator' ? 'admin' : 'employee',
+        employeeId: employees.employee_id
       };
 
       // Save user data to session
       setUser(userObj);
       localStorage.setItem("user", JSON.stringify(userObj));
       
-      // Create a Supabase session (for RLS policies)
+      // Create a Supabase session for RLS
       const { error: authError } = await supabase.auth.signInWithPassword({
         email,
         password 
@@ -92,7 +91,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (authError) {
         console.error("Supabase auth error:", authError);
-        // Continue anyway since we've already verified the user
       }
 
       toast.success("Login successful!");

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { toast } from "sonner";
@@ -30,16 +29,14 @@ const EmployeeContext = createContext<EmployeeContextType | undefined>(undefined
 
 export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
 
-  // Load employees from database on initial load
   useEffect(() => {
     if (user) {
       fetchEmployees();
     }
   }, [user]);
 
-  // Fetch employees from the database
   const fetchEmployees = async () => {
     try {
       const { data, error } = await supabase
@@ -52,7 +49,6 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       
       if (data) {
-        // Map database format to our interface format
         const formattedEmployees: Employee[] = data.map((emp) => ({
           id: emp.id,
           employeeId: emp.employee_id,
@@ -72,44 +68,21 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  // Get an employee by their employeeId
-  const getEmployeeById = (employeeId: string) => {
-    return employees.find((emp) => emp.employeeId === employeeId);
-  };
-
-  // Get an employee by their userId
-  const getEmployeeByUserId = (userId: string) => {
-    return employees.find((emp) => emp.id === userId);
-  };
-
-  // Add a new employee
   const addEmployee = async (employee: Omit<Employee, "id">) => {
-    if (!isAdmin) {
-      toast.error("Only admins can add employees");
-      return;
-    }
-
     try {
-      // Check if employee ID already exists
-      if (employees.some((emp) => emp.employeeId === employee.employeeId)) {
-        toast.error("Employee ID already exists");
-        return;
-      }
-
-      // Insert employee into database
       const { data, error } = await supabase
         .from('employees')
         .insert({
           employee_id: employee.employeeId,
           name: employee.name,
           email: employee.email,
-          password: await bcrypt.hash('password123', 10), // Default password, should be changed
+          password: await bcrypt.hash('password123', 10),
           position: employee.position,
           department: employee.department,
           join_date: employee.joinDate,
           contact: employee.contact
         })
-        .select('*')
+        .select()
         .single();
 
       if (error) {
@@ -137,25 +110,8 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  // Update an employee
   const updateEmployee = async (employeeId: string, updates: Partial<Employee>) => {
-    if (!isAdmin) {
-      toast.error("Only admins can update employees");
-      return;
-    }
-
     try {
-      // Check if updating to an existing employee ID
-      if (
-        updates.employeeId &&
-        updates.employeeId !== employeeId &&
-        employees.some((emp) => emp.employeeId === updates.employeeId)
-      ) {
-        toast.error("Employee ID already exists");
-        return;
-      }
-
-      // Map our interface fields to database fields
       const dbUpdates: any = {};
       if (updates.name) dbUpdates.name = updates.name;
       if (updates.email) dbUpdates.email = updates.email;
@@ -163,8 +119,7 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (updates.department) dbUpdates.department = updates.department;
       if (updates.joinDate) dbUpdates.join_date = updates.joinDate;
       if (updates.contact) dbUpdates.contact = updates.contact;
-      
-      // Update employee in database
+
       const { error } = await supabase
         .from('employees')
         .update(dbUpdates)
@@ -174,13 +129,12 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         throw error;
       }
 
-      // Update local state
       setEmployees(prevEmployees =>
         prevEmployees.map(emp =>
           emp.employeeId === employeeId ? { ...emp, ...updates } : emp
         )
       );
-      
+
       toast.success("Employee updated successfully");
     } catch (error) {
       console.error('Error updating employee:', error);
@@ -188,15 +142,8 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  // Delete an employee
   const deleteEmployee = async (employeeId: string) => {
-    if (!isAdmin) {
-      toast.error("Only admins can delete employees");
-      return;
-    }
-
     try {
-      // Delete employee from database
       const { error } = await supabase
         .from('employees')
         .delete()
@@ -206,16 +153,23 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         throw error;
       }
 
-      // Update local state
       setEmployees(prevEmployees =>
         prevEmployees.filter(emp => emp.employeeId !== employeeId)
       );
-      
+
       toast.success("Employee deleted successfully");
     } catch (error) {
       console.error('Error deleting employee:', error);
       toast.error('Failed to delete employee');
     }
+  };
+
+  const getEmployeeById = (employeeId: string) => {
+    return employees.find((emp) => emp.employeeId === employeeId);
+  };
+
+  const getEmployeeByUserId = (userId: string) => {
+    return employees.find((emp) => emp.id === userId);
   };
 
   return (
@@ -235,7 +189,6 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 };
 
-// Custom hook to use employee context
 export const useEmployee = () => {
   const context = useContext(EmployeeContext);
   if (context === undefined) {
