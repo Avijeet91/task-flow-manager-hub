@@ -55,9 +55,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (newSession?.user) {
           // Create extended user with the properties our app expects
-          const extendedUser: ExtendedUser = {
+          const extendedUser = {
             ...newSession.user
-          };
+          } as ExtendedUser;
           setUser(extendedUser);
           
           await fetchUserProfile(newSession.user.id);
@@ -77,9 +77,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (initialSession?.user) {
         // Create extended user with the properties our app expects
-        const extendedUser: ExtendedUser = {
+        const extendedUser = {
           ...initialSession.user
-        };
+        } as ExtendedUser;
         setUser(extendedUser);
         
         await fetchUserProfile(initialSession.user.id);
