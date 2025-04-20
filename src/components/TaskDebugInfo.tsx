@@ -18,26 +18,40 @@ const TaskDebugInfo = () => {
   console.log("Debug - Profile:", profile);
   console.log("Debug - All tasks:", tasks);
 
-  // Calculate task statistics
-  const userIdTasks = user ? tasks.filter(task => task.assignedTo === user.id).length : 0;
-  const employeeIdTasks = user?.employeeId 
-    ? tasks.filter(task => task.assignedTo === user.employeeId).length 
-    : 0;
-  const profileEmployeeIdTasks = profile?.employee_id 
-    ? tasks.filter(task => task.assignedTo === profile.employee_id).length 
-    : 0;
-  
   // Get all user identifiers
   const userId = user?.id || 'Not logged in';
   const employeeId = user?.employeeId || 'Not available';
   const profileEmployeeId = profile?.employee_id || 'Not available';
+  const emailUsername = user?.email ? user.email.split('@')[0] : 'Not available';
+
+  // Calculate task statistics with more detailed matching
+  const tasksWithUserIdExact = tasks.filter(task => task.assignedTo === userId);
+  const tasksWithEmployeeIdExact = tasks.filter(task => task.assignedTo === employeeId);
+  const tasksWithProfileIdExact = tasks.filter(task => task.assignedTo === profileEmployeeId);
+  const tasksWithEmailUsernameExact = tasks.filter(task => task.assignedTo === emailUsername);
+  
+  // Case insensitive matching checks
+  const tasksWithUserIdCI = tasks.filter(task => 
+    task.assignedTo.toLowerCase() === userId.toLowerCase());
+  const tasksWithEmployeeIdCI = tasks.filter(task => 
+    task.assignedTo.toLowerCase() === employeeId.toLowerCase());
+  const tasksWithProfileIdCI = tasks.filter(task => 
+    task.assignedTo.toLowerCase() === profileEmployeeId.toLowerCase());
+  
+  // Contains matching (fallback)
+  const tasksWithUserIdContains = tasks.filter(task => 
+    task.assignedTo.includes(userId));
+  const tasksWithEmployeeIdContains = tasks.filter(task => 
+    task.assignedTo.includes(employeeId));
+  const tasksWithEmailUsernameContains = tasks.filter(task =>
+    user?.email && task.assignedTo.includes(user.email.split('@')[0]));
 
   return (
     <Card className="mb-4 bg-slate-50">
       <CardHeader>
         <CardTitle className="text-sm">Task Debug Information</CardTitle>
       </CardHeader>
-      <CardContent className="text-xs font-mono overflow-auto max-h-40">
+      <CardContent className="text-xs font-mono overflow-auto max-h-60">
         <div className="space-y-2">
           <div>
             <strong>User ID:</strong> {userId}
@@ -55,23 +69,49 @@ const TaskDebugInfo = () => {
             <strong>Profile Employee ID:</strong> {profileEmployeeId}
           </div>
           <div>
+            <strong>Email Username:</strong> {emailUsername}
+          </div>
+          <div>
             <strong>Total Tasks:</strong> {tasks.length}
           </div>
-          <div>
-            <strong>Tasks with User ID as assignedTo:</strong> {userIdTasks}
-          </div>
-          <div>
-            <strong>Tasks with User Employee ID as assignedTo:</strong> {employeeIdTasks}
-          </div>
-          <div>
-            <strong>Tasks with Profile Employee ID as assignedTo:</strong> {profileEmployeeIdTasks}
-          </div>
+          
           <div className="pt-2 border-t border-gray-200">
-            <strong>Matching Task IDs:</strong> {tasks.filter(task => 
+            <strong>Exact Matches:</strong>
+          </div>
+          <div>
+            <strong>• Tasks with User ID:</strong> {tasksWithUserIdExact.length}
+          </div>
+          <div>
+            <strong>• Tasks with Employee ID:</strong> {tasksWithEmployeeIdExact.length}
+          </div>
+          <div>
+            <strong>• Tasks with Profile Employee ID:</strong> {tasksWithProfileIdExact.length}
+          </div>
+          <div>
+            <strong>• Tasks with Email Username:</strong> {tasksWithEmailUsernameExact.length}
+          </div>
+          
+          <div className="pt-2 border-t border-gray-200">
+            <strong>Case Insensitive Matches:</strong>
+          </div>
+          <div>
+            <strong>• Tasks with User ID (CI):</strong> {tasksWithUserIdCI.length}
+          </div>
+          <div>
+            <strong>• Tasks with Employee ID (CI):</strong> {tasksWithEmployeeIdCI.length}
+          </div>
+          <div>
+            <strong>• Tasks with Profile ID (CI):</strong> {tasksWithProfileIdCI.length}
+          </div>
+          
+          <div className="pt-2 border-t border-gray-200">
+            <strong>All Assigned Task IDs:</strong> {tasks.filter(task => 
               task.assignedTo === userId || 
               task.assignedTo === employeeId || 
-              task.assignedTo === profileEmployeeId
-            ).map(t => t.id).join(', ')}
+              task.assignedTo === profileEmployeeId ||
+              task.assignedTo.toLowerCase() === employeeId.toLowerCase() ||
+              (user?.email && task.assignedTo.includes(user.email.split('@')[0]))
+            ).map(t => t.id).join(', ') || 'None'}
           </div>
         </div>
       </CardContent>

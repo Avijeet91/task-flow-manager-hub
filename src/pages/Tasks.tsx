@@ -32,6 +32,14 @@ const Tasks = () => {
     console.log("All tasks:", tasks);
   }, []);
   
+  // Force a refresh of tasks when user or profile changes
+  useEffect(() => {
+    if (user && profile) {
+      console.log("User or profile changed, refreshing tasks");
+      fetchTasks();
+    }
+  }, [user, profile]);
+  
   const allTasks = getUserTasks();
   
   const [searchQuery, setSearchQuery] = useState("");

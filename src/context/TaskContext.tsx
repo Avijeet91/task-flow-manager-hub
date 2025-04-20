@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { toast } from "sonner";
@@ -127,25 +126,23 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? tasks.filter((task) => task.assignedTo === employeeId)
         : tasks;
     } else {
-      // Use either the employeeId parameter, user.employeeId, or profile.employee_id
-      const effectiveEmployeeId = employeeId || user.employeeId || profile?.employee_id;
-      console.log("Using effective employee ID for filtering:", effectiveEmployeeId);
+      // Get all possible IDs this employee might be identified by
+      const possibleEmployeeIds = [
+        user.id, // UUID
+        user.employeeId, // Employee ID from user object
+        profile?.employee_id, // Employee ID from profile
+        employeeId, // Employee ID from function params
+        user.email?.split('@')[0], // Username part of email as fallback
+      ].filter(Boolean) as string[];
       
-      // Add more flexible matching for employee tasks - the key fix is here!
+      console.log("Possible employee IDs to check:", possibleEmployeeIds);
+      
+      // Find tasks assigned to any of the possible IDs
       const employeeTasks = tasks.filter((task) => {
-        // Check if the task is assigned to this user's ID directly (UUID format)
-        if (task.assignedTo === user.id) return true;
-        
-        // Check if the task is assigned to the employee ID
-        if (effectiveEmployeeId && task.assignedTo === effectiveEmployeeId) return true;
-        
-        // Check if the task assignedTo matches the profile's employee_id
-        if (profile?.employee_id && task.assignedTo === profile.employee_id) return true;
-        
-        // Check if assignedTo contains part of the user's email (as a fallback)
-        if (user.email && task.assignedTo.includes(user.email.split('@')[0])) return true;
-        
-        return false;
+        return possibleEmployeeIds.some(id => 
+          task.assignedTo === id || 
+          task.assignedTo.toLowerCase() === id.toLowerCase()
+        );
       });
       
       console.log("Filtered employee tasks:", employeeTasks);
