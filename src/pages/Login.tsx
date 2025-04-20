@@ -11,14 +11,14 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const { login, isLoading, user } = useAuth();
+  const { login, isLoading, user, session } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
+    if (user && session) {
       navigate("/dashboard");
     }
-  }, [user, navigate]);
+  }, [user, session, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

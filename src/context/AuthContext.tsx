@@ -1,23 +1,29 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { Session, User } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import bcrypt from "bcryptjs";
 
-// Define types for our users
 export type UserRole = "admin" | "employee";
 
-export interface User {
+interface UserProfile {
   id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  employeeId?: string; // Only required for employees
+  first_name: string;
+  last_name: string;
+  employee_id: string;
+  position: string;
+  department: string;
+  contact: string;
+  join_date: string;
 }
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
+  profile: UserProfile | null;
   login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  signup: (email: string, password: string, userData: Record<string, any>) => Promise<boolean>;
+  logout: () => Promise<void>;
   isAdmin: boolean;
   isLoading: boolean;
 }
@@ -26,80 +32,164 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
 
-  // Check if user is already logged in (saved in localStorage)
+  // Setup auth state listener and check for existing session
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error("Failed to parse stored user:", error);
-        localStorage.removeItem("user");
+    setIsLoading(true);
+
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        
+        if (newSession?.user) {
+          await fetchUserProfile(newSession.user.id);
+          await fetchUserRoles(newSession.user.id);
+        } else {
+          setProfile(null);
+          setUserRoles([]);
+        }
       }
-    }
-    setIsLoading(false);
+    );
+
+    // Then check for existing session
+    const initializeAuth = async () => {
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      setSession(initialSession);
+      setUser(initialSession?.user ?? null);
+      
+      if (initialSession?.user) {
+        await fetchUserProfile(initialSession.user.id);
+        await fetchUserRoles(initialSession.user.id);
+      }
+      
+      setIsLoading(false);
+    };
+
+    initializeAuth();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // Login function - authenticate against the database
-  const login = async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true);
-    
+  const fetchUserProfile = async (userId: string) => {
     try {
-      // Get employee from the employees table
-      const { data: employees, error } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('email', email)
-        .limit(1)
-        .single();
-      
-      if (error || !employees) {
-        toast.error("Invalid email or password");
-        setIsLoading(false);
-        return false;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching user profile:", error);
+        return;
       }
 
-      // Compare password
-      const passwordMatch = await bcrypt.compare(password, employees.password);
-      
-      if (!passwordMatch) {
-        toast.error("Invalid email or password");
-        setIsLoading(false);
-        return false;
+      if (data) {
+        setProfile(data as UserProfile);
+      }
+    } catch (error) {
+      console.error("Error in fetchUserProfile:", error);
+    }
+  };
+
+  const fetchUserRoles = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+
+      if (error) {
+        console.error("Error fetching user roles:", error);
+        return;
       }
 
-      // Create user object from employee data
-      const userObj: User = {
-        id: employees.id,
-        name: employees.name,
-        email: employees.email,
-        role: employees.position === 'Administrator' ? 'admin' : 'employee',
-        employeeId: employees.employee_id
-      };
+      if (data) {
+        setUserRoles(data.map(item => item.role));
+      }
+    } catch (error) {
+      console.error("Error in fetchUserRoles:", error);
+    }
+  };
 
-      // Save user data to session
-      setUser(userObj);
-      localStorage.setItem("user", JSON.stringify(userObj));
-      
-      // Create a Supabase session for RLS
-      const { error: authError } = await supabase.auth.signInWithPassword({
+  // Login function
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-        password 
+        password
       });
 
-      if (authError) {
-        console.error("Supabase auth error:", authError);
+      if (error) {
+        toast.error(error.message);
+        return false;
       }
 
-      toast.success("Login successful!");
-      setIsLoading(false);
+      toast.success("Login successful");
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
       toast.error("An error occurred during login");
-      setIsLoading(false);
+      return false;
+    }
+  };
+
+  // Signup function
+  const signup = async (
+    email: string, 
+    password: string,
+    userData: Record<string, any>
+  ): Promise<boolean> => {
+    try {
+      // Generate a unique employee ID
+      const employeeId = userData.employeeId || `EMP${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+      
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: userData.name.split(' ')[0] || '',
+            last_name: userData.name.split(' ').slice(1).join(' ') || '',
+            employee_id: employeeId,
+            position: userData.position || 'employee',
+            department: userData.department || '',
+          }
+        }
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return false;
+      }
+
+      // After signup, we need to assign the employee role
+      const { data: userData2 } = await supabase.auth.getUser();
+      if (userData2?.user) {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: userData2.user.id,
+            role: 'employee'
+          });
+
+        if (roleError) {
+          console.error("Error assigning role:", roleError);
+        }
+      }
+
+      toast.success("Registration successful! Please verify your email.");
+      return true;
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      toast.error("An error occurred during signup");
       return false;
     }
   };
@@ -107,20 +197,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Logout function
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
-      setUser(null);
-      localStorage.removeItem("user");
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        throw error;
+      }
       toast.info("Logged out successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Logout error:", error);
       toast.error("An error occurred during logout");
     }
   };
 
-  const isAdmin = user?.role === "admin";
+  const isAdmin = userRoles.includes('admin');
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAdmin, isLoading }}>
+    <AuthContext.Provider 
+      value={{ 
+        user, 
+        session, 
+        profile, 
+        login, 
+        signup, 
+        logout, 
+        isAdmin, 
+        isLoading 
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

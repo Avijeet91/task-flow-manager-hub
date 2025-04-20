@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, User, Building2, Phone, Briefcase } from "lucide-react";
 import { toast } from "sonner";
-import bcrypt from "bcryptjs";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -20,45 +19,18 @@ const Register = () => {
   });
   const [isRegistering, setIsRegistering] = useState(false);
   const navigate = useNavigate();
+  const { signup } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsRegistering(true);
 
     try {
-      // Generate a unique employee ID
-      const empId = 'EMP' + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-      
-      // Hash the password
-      const hashedPassword = await bcrypt.hash(formData.password, 10);
-
-      // Insert the new employee
-      const { error } = await supabase
-        .from('employees')
-        .insert({
-          employee_id: empId,
-          name: formData.name,
-          email: formData.email,
-          password: hashedPassword,
-          position: formData.position,
-          department: formData.department,
-          contact: formData.contact
-        });
-
-      if (error) {
-        if (error.code === '23505') { // Unique constraint violation
-          toast.error("Email already registered");
-        } else {
-          toast.error("Registration failed");
-        }
-        return;
+      const success = await signup(formData.email, formData.password, formData);
+      if (success) {
+        toast.success("Registration successful! Please verify your email if required.");
+        navigate("/login");
       }
-
-      toast.success("Registration successful! Please login.");
-      navigate("/login");
-    } catch (error) {
-      console.error("Registration error:", error);
-      toast.error("An error occurred during registration");
     } finally {
       setIsRegistering(false);
     }

@@ -3,22 +3,19 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
-import { useEmployee } from "@/context/EmployeeContext";
 import { useTask } from "@/context/TaskContext";
 import { Mail, User, Calendar, Briefcase, Building, Phone, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 
 const Profile = () => {
-  const { user } = useAuth();
-  const { getEmployeeByUserId } = useEmployee();
+  const { user, profile, isAdmin } = useAuth();
   const { getUserTasks } = useTask();
 
   if (!user) return null;
   
-  const isEmployee = user.role === "employee";
-  const employee = isEmployee ? getEmployeeByUserId(user.id) : null;
-  const userTasks = getUserTasks(user.employeeId);
+  const isEmployee = !isAdmin;
+  const userTasks = getUserTasks(profile?.employee_id);
   
   const completedTasks = userTasks.filter((task) => task.status === "completed").length;
   const pendingTasks = userTasks.filter((task) => task.status === "pending").length;
@@ -43,7 +40,9 @@ const Profile = () => {
 
             <div className="space-y-4 flex-1">
               <div className="space-y-1">
-                <h2 className="text-xl font-bold">{user.name}</h2>
+                <h2 className="text-xl font-bold">
+                  {profile ? `${profile.first_name} ${profile.last_name}` : user.email}
+                </h2>
                 <p className="text-gray-500">{isEmployee ? "Employee" : "Administrator"}</p>
               </div>
 
@@ -53,28 +52,30 @@ const Profile = () => {
                   <span>{user.email}</span>
                 </div>
 
-                {isEmployee && employee && (
+                {profile && (
                   <>
                     <div className="flex items-center">
                       <Phone className="h-5 w-5 text-gray-500 mr-2" />
-                      <span>{employee.contact}</span>
+                      <span>{profile.contact || 'N/A'}</span>
                     </div>
                     <div className="flex items-center">
                       <Briefcase className="h-5 w-5 text-gray-500 mr-2" />
-                      <span>{employee.position}</span>
+                      <span>{profile.position || 'N/A'}</span>
                     </div>
                     <div className="flex items-center">
                       <Building className="h-5 w-5 text-gray-500 mr-2" />
-                      <span>{employee.department}</span>
+                      <span>{profile.department || 'N/A'}</span>
                     </div>
                     <div className="flex items-center">
                       <User className="h-5 w-5 text-gray-500 mr-2" />
-                      <span>Employee ID: {employee.employeeId}</span>
+                      <span>Employee ID: {profile.employee_id || 'N/A'}</span>
                     </div>
-                    <div className="flex items-center">
-                      <Calendar className="h-5 w-5 text-gray-500 mr-2" />
-                      <span>Joined: {format(new Date(employee.joinDate), "MMMM d, yyyy")}</span>
-                    </div>
+                    {profile.join_date && (
+                      <div className="flex items-center">
+                        <Calendar className="h-5 w-5 text-gray-500 mr-2" />
+                        <span>Joined: {format(new Date(profile.join_date), "MMMM d, yyyy")}</span>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

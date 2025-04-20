@@ -13,7 +13,7 @@ import MainLayout from "./components/MainLayout";
 
 // Pages
 import Login from "./pages/Login";
-import Register from "./pages/Register";  // Add this import
+import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import TaskDetail from "./pages/TaskDetail";
@@ -27,13 +27,13 @@ const queryClient = new QueryClient();
 
 // Route guard for protected routes
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  const { user, isLoading } = useAuth();
+  const { user, session, isLoading } = useAuth();
   
   if (isLoading) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
   
-  if (!user) {
+  if (!user || !session) {
     return <Navigate to="/login" replace />;
   }
   
@@ -42,13 +42,13 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
 
 // Route guard specifically for admin routes
 const AdminRoute = ({ children }: { children: JSX.Element }) => {
-  const { user, isAdmin, isLoading } = useAuth();
+  const { user, session, isAdmin, isLoading } = useAuth();
   
   if (isLoading) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
   
-  if (!user) {
+  if (!user || !session) {
     return <Navigate to="/login" replace />;
   }
   

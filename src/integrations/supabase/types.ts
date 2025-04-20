@@ -51,6 +51,45 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          contact: string | null
+          created_at: string | null
+          department: string | null
+          employee_id: string | null
+          first_name: string | null
+          id: string
+          join_date: string | null
+          last_name: string | null
+          position: string
+          updated_at: string | null
+        }
+        Insert: {
+          contact?: string | null
+          created_at?: string | null
+          department?: string | null
+          employee_id?: string | null
+          first_name?: string | null
+          id: string
+          join_date?: string | null
+          last_name?: string | null
+          position?: string
+          updated_at?: string | null
+        }
+        Update: {
+          contact?: string | null
+          created_at?: string | null
+          department?: string | null
+          employee_id?: string | null
+          first_name?: string | null
+          id?: string
+          join_date?: string | null
+          last_name?: string | null
+          position?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       task_comments: {
         Row: {
           created_at: string | null
@@ -137,12 +176,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: { user_id: string; required_role: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

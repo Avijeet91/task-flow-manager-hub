@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 const MainLayout: React.FC = () => {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, profile, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -122,13 +122,15 @@ const MainLayout: React.FC = () => {
         <header className="bg-white shadow-sm z-10">
           <div className="px-4 py-4 flex justify-between items-center">
             <h1 className="text-2xl font-semibold text-gray-800">
-              Welcome, {user.name}
+              Welcome, {profile?.first_name || user.email}
             </h1>
             <div className="flex items-center space-x-4">
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {profile?.first_name} {profile?.last_name}
+                </p>
                 <p className="text-xs text-gray-500">
-                  {isAdmin ? "Administrator" : `Employee ID: ${user.employeeId}`}
+                  {isAdmin ? "Administrator" : `Employee ID: ${profile?.employee_id}`}
                 </p>
               </div>
             </div>
