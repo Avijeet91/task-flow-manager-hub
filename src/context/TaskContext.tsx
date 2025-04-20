@@ -61,8 +61,11 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!user) return;
       
-      // Fetch tasks from the database using an RPC function
-      const { data: tasksData, error: tasksError } = await supabase.rpc('get_all_tasks');
+      // Fetch tasks from the database
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
       
       if (tasksError) {
         throw tasksError;
@@ -73,19 +76,22 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Fetch all comments for tasks
-      const { data: commentsData, error: commentsError } = await supabase.rpc('get_all_task_comments');
+      const { data: commentsData, error: commentsError } = await supabase
+        .from('task_comments')
+        .select('*')
+        .order('created_at');
       
       if (commentsError) {
         throw commentsError;
       }
       
       // Map data to our interface format
-      const formattedTasks: Task[] = tasksData.map((task: any) => {
+      const formattedTasks: Task[] = tasksData.map((task) => {
         // Find all comments for this task
-        const taskComments = commentsData?.filter((comment: any) => comment.task_id === task.id) || [];
+        const taskComments = commentsData?.filter((comment) => comment.task_id === task.id) || [];
         
         // Map comments to our interface format
-        const formattedComments = taskComments.map((comment: any) => ({
+        const formattedComments = taskComments.map((comment) => ({
           id: comment.id,
           userId: comment.user_id,
           userName: comment.user_name,
@@ -147,39 +153,42 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       // Insert task into database
-      const { data, error } = await supabase.rpc('add_task', {
-        title_param: task.title,
-        description_param: task.description,
-        assigned_to_param: task.assignedTo,
-        assigned_to_name_param: task.assignedToName,
-        assigned_by_param: user.id,
-        assigned_by_name_param: user.name,
-        status_param: task.status,
-        priority_param: task.priority,
-        due_date_param: task.dueDate,
-        progress_param: task.progress
-      });
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert({
+          title: task.title,
+          description: task.description,
+          assigned_to: task.assignedTo,
+          assigned_to_name: task.assignedToName,
+          assigned_by: user.id,
+          assigned_by_name: user.name,
+          status: task.status,
+          priority: task.priority,
+          due_date: task.dueDate,
+          progress: task.progress
+        })
+        .select('*')
+        .single();
 
       if (error) {
         throw error;
       }
 
-      if (data && data[0]) {
-        const taskData = data[0];
+      if (data) {
         const newTask: Task = {
-          id: taskData.id,
-          title: taskData.title,
-          description: taskData.description || '',
-          assignedTo: taskData.assigned_to,
-          assignedToName: taskData.assigned_to_name,
-          assignedBy: taskData.assigned_by,
-          assignedByName: taskData.assigned_by_name,
-          status: taskData.status as TaskStatus,
-          priority: taskData.priority as "low" | "medium" | "high",
-          createdAt: taskData.created_at,
-          dueDate: taskData.due_date,
-          completedAt: taskData.completed_at,
-          progress: taskData.progress,
+          id: data.id,
+          title: data.title,
+          description: data.description || '',
+          assignedTo: data.assigned_to,
+          assignedToName: data.assigned_to_name,
+          assignedBy: data.assigned_by,
+          assignedByName: data.assigned_by_name,
+          status: data.status as TaskStatus,
+          priority: data.priority as "low" | "medium" | "high",
+          createdAt: data.created_at,
+          dueDate: data.due_date,
+          completedAt: data.completed_at,
+          progress: data.progress,
           comments: []
         };
 
@@ -204,17 +213,25 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
+      // Map our interface fields to database fields
+      const dbUpdates: any = {};
+      if (updates.title) dbUpdates.title = updates.title;
+      if (updates.description !== undefined) dbUpdates.description = updates.description;
+      if (updates.status) dbUpdates.status = updates.status;
+      if (updates.priority) dbUpdates.priority = updates.priority;
+      if (updates.dueDate) dbUpdates.due_date = updates.dueDate;
+      if (isCompletingTask) {
+        dbUpdates.completed_at = new Date().toISOString();
+        dbUpdates.progress = 100;
+      } else if (updates.progress !== undefined) {
+        dbUpdates.progress = updates.progress;
+      }
+      
       // Update task in database
-      const { error } = await supabase.rpc('update_task', {
-        task_id_param: taskId,
-        title_param: updates.title,
-        description_param: updates.description,
-        status_param: updates.status,
-        priority_param: updates.priority,
-        due_date_param: updates.dueDate,
-        completed_at_param: isCompletingTask ? new Date().toISOString() : null,
-        progress_param: isCompletingTask ? 100 : updates.progress
-      });
+      const { error } = await supabase
+        .from('tasks')
+        .update(dbUpdates)
+        .eq('id', taskId);
 
       if (error) {
         throw error;
@@ -257,19 +274,24 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Determine if status needs to change based on progress
       let newStatus = currentTask.status;
+      let completedAt = currentTask.completedAt;
+      
       if (progress === 100 && currentTask.status !== "completed") {
         newStatus = "completed";
+        completedAt = new Date().toISOString();
       } else if (progress > 0 && currentTask.status === "pending") {
         newStatus = "in_progress";
       }
 
       // Update task in database
-      const { error } = await supabase.rpc('update_task_progress', {
-        task_id_param: taskId,
-        progress_param: progress,
-        status_param: newStatus,
-        completed_at_param: newStatus === "completed" ? new Date().toISOString() : null
-      });
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          progress: progress,
+          status: newStatus,
+          completed_at: newStatus === "completed" ? completedAt : null
+        })
+        .eq('id', taskId);
 
       if (error) {
         throw error;
@@ -304,25 +326,28 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       // Insert comment into database
-      const { data, error } = await supabase.rpc('add_task_comment', {
-        task_id_param: taskId,
-        user_id_param: user.id,
-        user_name_param: user.name,
-        text_param: commentText
-      });
+      const { data, error } = await supabase
+        .from('task_comments')
+        .insert({
+          task_id: taskId,
+          user_id: user.id,
+          user_name: user.name,
+          text: commentText
+        })
+        .select('*')
+        .single();
 
       if (error) {
         throw error;
       }
 
-      if (data && data[0]) {
-        const commentData = data[0];
+      if (data) {
         const newComment = {
-          id: commentData.id,
-          userId: commentData.user_id,
-          userName: commentData.user_name,
-          text: commentData.text,
-          createdAt: commentData.created_at
+          id: data.id,
+          userId: data.user_id,
+          userName: data.user_name,
+          text: data.text,
+          createdAt: data.created_at
         };
 
         // Update local state
@@ -351,9 +376,10 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       // Delete task from database
-      const { error } = await supabase.rpc('delete_task', {
-        task_id_param: taskId
-      });
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId);
 
       if (error) {
         throw error;
