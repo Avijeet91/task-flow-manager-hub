@@ -51,14 +51,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Get employee from the database using a custom RPC function
       const { data, error } = await supabase.rpc('get_employee_by_email', { email_param: email });
       
-      if (error || !data) {
+      if (error || !data || !data[0]) {
         toast.error("Invalid email or password");
         setIsLoading(false);
         return false;
       }
 
+      const employee = data[0];
+
       // Compare password
-      const passwordMatch = await bcrypt.compare(password, data.password);
+      const passwordMatch = await bcrypt.compare(password, employee.password);
       
       if (!passwordMatch) {
         toast.error("Invalid email or password");
@@ -68,11 +70,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Create user object from employee data
       const userObj: User = {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        role: data.position === 'Administrator' ? 'admin' : 'employee',
-        employeeId: data.employee_id
+        id: employee.id,
+        name: employee.name,
+        email: employee.email,
+        role: employee.position === 'Administrator' ? 'admin' : 'employee',
+        employeeId: employee.employee_id
       };
 
       // Save user data to session

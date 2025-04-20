@@ -109,16 +109,17 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         throw error;
       }
 
-      if (data) {
+      if (data && data[0]) {
+        const emp = data[0];
         const newEmployee: Employee = {
-          id: data.id,
-          employeeId: data.employee_id,
-          name: data.name,
-          email: data.email,
-          position: data.position || '',
-          department: data.department || '',
-          joinDate: data.join_date || new Date().toISOString().split('T')[0],
-          contact: data.contact || '',
+          id: emp.id,
+          employeeId: emp.employee_id,
+          name: emp.name,
+          email: emp.email,
+          position: emp.position || '',
+          department: emp.department || '',
+          joinDate: emp.join_date || new Date().toISOString().split('T')[0],
+          contact: emp.contact || '',
         };
 
         setEmployees(prev => [...prev, newEmployee]);

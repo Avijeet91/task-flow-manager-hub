@@ -164,21 +164,22 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
-      if (data) {
+      if (data && data[0]) {
+        const taskData = data[0];
         const newTask: Task = {
-          id: data.id,
-          title: data.title,
-          description: data.description || '',
-          assignedTo: data.assigned_to,
-          assignedToName: data.assigned_to_name,
-          assignedBy: data.assigned_by,
-          assignedByName: data.assigned_by_name,
-          status: data.status as TaskStatus,
-          priority: data.priority as "low" | "medium" | "high",
-          createdAt: data.created_at,
-          dueDate: data.due_date,
-          completedAt: data.completed_at,
-          progress: data.progress,
+          id: taskData.id,
+          title: taskData.title,
+          description: taskData.description || '',
+          assignedTo: taskData.assigned_to,
+          assignedToName: taskData.assigned_to_name,
+          assignedBy: taskData.assigned_by,
+          assignedByName: taskData.assigned_by_name,
+          status: taskData.status as TaskStatus,
+          priority: taskData.priority as "low" | "medium" | "high",
+          createdAt: taskData.created_at,
+          dueDate: taskData.due_date,
+          completedAt: taskData.completed_at,
+          progress: taskData.progress,
           comments: []
         };
 
@@ -314,13 +315,14 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
-      if (data) {
+      if (data && data[0]) {
+        const commentData = data[0];
         const newComment = {
-          id: data.id,
-          userId: data.user_id,
-          userName: data.user_name,
-          text: data.text,
-          createdAt: data.created_at
+          id: commentData.id,
+          userId: commentData.user_id,
+          userName: commentData.user_name,
+          text: commentData.text,
+          createdAt: commentData.created_at
         };
 
         // Update local state
