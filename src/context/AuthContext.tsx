@@ -48,21 +48,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
-      // Get employee from the database
-      const { data: employee, error } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('email', email)
-        .single();
+      // Get employee from the database using a custom RPC function
+      const { data, error } = await supabase.rpc('get_employee_by_email', { email_param: email });
       
-      if (error || !employee) {
+      if (error || !data) {
         toast.error("Invalid email or password");
         setIsLoading(false);
         return false;
       }
 
-      // Compare password (in a real app, this would be done server-side)
-      const passwordMatch = await bcrypt.compare(password, employee.password);
+      // Compare password
+      const passwordMatch = await bcrypt.compare(password, data.password);
       
       if (!passwordMatch) {
         toast.error("Invalid email or password");
@@ -72,11 +68,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Create user object from employee data
       const userObj: User = {
-        id: employee.id,
-        name: employee.name,
-        email: employee.email,
-        role: employee.position === 'Administrator' ? 'admin' : 'employee',
-        employeeId: employee.employee_id
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: data.position === 'Administrator' ? 'admin' : 'employee',
+        employeeId: data.employee_id
       };
 
       // Save user data to session
@@ -86,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Create a Supabase session (for RLS policies)
       const { error: authError } = await supabase.auth.signInWithPassword({
         email,
-        password // This will work with our password because we're using the same hash method
+        password 
       });
 
       if (authError) {

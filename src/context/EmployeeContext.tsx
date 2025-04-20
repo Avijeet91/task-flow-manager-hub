@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import bcrypt from "bcryptjs";
 
 export interface Employee {
   id: string;
@@ -41,7 +42,7 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Fetch employees from the database
   const fetchEmployees = async () => {
     try {
-      const { data, error } = await supabase.from('employees').select('*');
+      const { data, error } = await supabase.rpc('get_all_employees');
       
       if (error) {
         throw error;
@@ -49,7 +50,7 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       if (data) {
         // Map database format to our interface format
-        const formattedEmployees: Employee[] = data.map(emp => ({
+        const formattedEmployees: Employee[] = data.map((emp: any) => ({
           id: emp.id,
           employeeId: emp.employee_id,
           name: emp.name,
@@ -93,31 +94,31 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       // Insert employee into database
-      const { data, error } = await supabase.from('employees').insert({
-        employee_id: employee.employeeId,
-        name: employee.name,
-        email: employee.email,
-        password: await bcrypt.hash('password123', 10), // Default password, should be changed
-        position: employee.position,
-        department: employee.department,
-        join_date: employee.joinDate,
-        contact: employee.contact
-      }).select();
+      const { data, error } = await supabase.rpc('add_employee', {
+        employee_id_param: employee.employeeId,
+        name_param: employee.name,
+        email_param: employee.email,
+        password_param: await bcrypt.hash('password123', 10), // Default password, should be changed
+        position_param: employee.position,
+        department_param: employee.department,
+        join_date_param: employee.joinDate,
+        contact_param: employee.contact
+      });
 
       if (error) {
         throw error;
       }
 
-      if (data && data[0]) {
+      if (data) {
         const newEmployee: Employee = {
-          id: data[0].id,
-          employeeId: data[0].employee_id,
-          name: data[0].name,
-          email: data[0].email,
-          position: data[0].position || '',
-          department: data[0].department || '',
-          joinDate: data[0].join_date || new Date().toISOString().split('T')[0],
-          contact: data[0].contact || '',
+          id: data.id,
+          employeeId: data.employee_id,
+          name: data.name,
+          email: data.email,
+          position: data.position || '',
+          department: data.department || '',
+          joinDate: data.join_date || new Date().toISOString().split('T')[0],
+          contact: data.contact || '',
         };
 
         setEmployees(prev => [...prev, newEmployee]);
@@ -147,20 +148,16 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return;
       }
 
-      // Format updates for database
-      const dbUpdates: any = {};
-      if (updates.name) dbUpdates.name = updates.name;
-      if (updates.email) dbUpdates.email = updates.email;
-      if (updates.position) dbUpdates.position = updates.position;
-      if (updates.department) dbUpdates.department = updates.department;
-      if (updates.joinDate) dbUpdates.join_date = updates.joinDate;
-      if (updates.contact) dbUpdates.contact = updates.contact;
-
       // Update employee in database
-      const { error } = await supabase
-        .from('employees')
-        .update(dbUpdates)
-        .eq('employee_id', employeeId);
+      const { error } = await supabase.rpc('update_employee', {
+        employee_id_param: employeeId,
+        name_param: updates.name,
+        email_param: updates.email,
+        position_param: updates.position,
+        department_param: updates.department,
+        join_date_param: updates.joinDate,
+        contact_param: updates.contact
+      });
 
       if (error) {
         throw error;
@@ -189,10 +186,9 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     try {
       // Delete employee from database
-      const { error } = await supabase
-        .from('employees')
-        .delete()
-        .eq('employee_id', employeeId);
+      const { error } = await supabase.rpc('delete_employee', {
+        employee_id_param: employeeId
+      });
 
       if (error) {
         throw error;
