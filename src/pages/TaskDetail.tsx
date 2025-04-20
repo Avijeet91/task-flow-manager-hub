@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -47,7 +46,7 @@ import { toast } from "sonner";
 const TaskDetail = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const { getTaskById, updateTask, updateTaskProgress, addTaskComment, deleteTask } = useTask();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, profile } = useAuth();
   const navigate = useNavigate();
 
   const task = getTaskById(taskId || "");
@@ -149,6 +148,8 @@ const TaskDetail = () => {
     }
   };
 
+  const isAssignedToUser = profile && profile.employee_id === task.assignedTo;
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6 flex justify-between items-center">
@@ -236,8 +237,7 @@ const TaskDetail = () => {
             </div>
             <Progress value={task.progress} className="h-2 mb-2" />
             
-            {/* Only show progress update controls to the assigned employee */}
-            {!isAdmin && user?.employeeId === task.assignedTo && task.status !== "completed" && (
+            {!isAdmin && isAssignedToUser && task.status !== "completed" && (
               <div className="mt-4 flex flex-col md:flex-row gap-4">
                 <div className="flex-1">
                   <Input
@@ -295,7 +295,6 @@ const TaskDetail = () => {
         </div>
       </div>
 
-      {/* Edit Task Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -386,7 +385,6 @@ const TaskDetail = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Task Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>

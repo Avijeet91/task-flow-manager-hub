@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { toast } from "sonner";
@@ -115,6 +116,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? tasks.filter((task) => task.assignedTo === employeeId)
         : tasks;
     } else {
+      // Use the user.employeeId property from our extended user
       return tasks.filter((task) => task.assignedTo === user.employeeId);
     }
   };
@@ -138,7 +140,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
           assigned_to: task.assignedTo,
           assigned_to_name: task.assignedToName,
           assigned_by: user.id,
-          assigned_by_name: user.name,
+          assigned_by_name: user.name || 'Admin', // Use the user.name from our extended user with fallback
           status: task.status,
           priority: task.priority,
           due_date: task.dueDate,
@@ -296,7 +298,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .insert({
           task_id: taskId,
           user_id: user.id,
-          user_name: user.name,
+          user_name: user.name || 'Anonymous', // Use the user.name from our extended user with fallback
           text: commentText
         })
         .select('*')

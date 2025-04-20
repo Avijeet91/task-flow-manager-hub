@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTask } from "@/context/TaskContext";
@@ -21,7 +20,7 @@ import { toast } from "sonner";
 const CreateTask = () => {
   const { addTask } = useTask();
   const { employees } = useEmployee();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -63,14 +62,20 @@ const CreateTask = () => {
       return;
     }
 
-    // We need to provide assignedBy and assignedByName
+    if (!user) {
+      toast.error("You must be logged in to create tasks");
+      return;
+    }
+
+    const adminName = profile ? `${profile.first_name} ${profile.last_name}`.trim() : "Admin";
+    
     addTask({
       title: formData.title,
       description: formData.description,
       assignedTo: formData.assignedTo,
       assignedToName: formData.assignedToName,
-      assignedBy: user?.id || "", // Add missing property
-      assignedByName: user?.name || "", // Add missing property
+      assignedBy: user.id,
+      assignedByName: adminName,
       status: formData.status as any,
       priority: formData.priority as any,
       dueDate: new Date(formData.dueDate).toISOString(),

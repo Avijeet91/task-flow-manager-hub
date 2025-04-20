@@ -17,8 +17,15 @@ interface UserProfile {
   join_date: string;
 }
 
+// Extended user type with the properties we need
+export interface ExtendedUser extends User {
+  employeeId?: string;
+  name?: string;
+  role?: UserRole;
+}
+
 interface AuthContextType {
-  user: User | null;
+  user: ExtendedUser | null;
   session: Session | null;
   profile: UserProfile | null;
   login: (email: string, password: string) => Promise<boolean>;
@@ -31,7 +38,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<ExtendedUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,12 +52,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         setSession(newSession);
-        setUser(newSession?.user ?? null);
         
         if (newSession?.user) {
+          // Create extended user with the properties our app expects
+          const extendedUser: ExtendedUser = {
+            ...newSession.user
+          };
+          setUser(extendedUser);
+          
           await fetchUserProfile(newSession.user.id);
           await fetchUserRoles(newSession.user.id);
         } else {
+          setUser(null);
           setProfile(null);
           setUserRoles([]);
         }
@@ -61,9 +74,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initializeAuth = async () => {
       const { data: { session: initialSession } } = await supabase.auth.getSession();
       setSession(initialSession);
-      setUser(initialSession?.user ?? null);
       
       if (initialSession?.user) {
+        // Create extended user with the properties our app expects
+        const extendedUser: ExtendedUser = {
+          ...initialSession.user
+        };
+        setUser(extendedUser);
+        
         await fetchUserProfile(initialSession.user.id);
         await fetchUserRoles(initialSession.user.id);
       }
@@ -77,6 +95,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription.unsubscribe();
     };
   }, []);
+
+  // This effect updates the extended user properties after profile and roles are fetched
+  useEffect(() => {
+    if (user && profile) {
+      setUser(prevUser => {
+        if (!prevUser) return null;
+        
+        return {
+          ...prevUser,
+          employeeId: profile.employee_id,
+          name: `${profile.first_name} ${profile.last_name}`.trim(),
+          role: isAdmin ? "admin" : "employee"
+        };
+      });
+    }
+  }, [profile, userRoles]);
 
   const fetchUserProfile = async (userId: string) => {
     try {

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/hooks/useSettings";
@@ -35,25 +34,25 @@ import { useEmployee } from "@/context/EmployeeContext";
 import { toast } from "sonner";
 
 const SettingsPage: React.FC = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const { settings, loading, saveSettings } = useSettings();
   const { employees, updateEmployee } = useEmployee();
   
-  const currentEmployee = user?.employeeId 
-    ? employees.find(emp => emp.employeeId === user.employeeId)
+  const currentEmployee = profile?.employee_id
+    ? employees.find(emp => emp.employeeId === profile.employee_id)
     : null;
 
   const accountForm = useForm({
     defaultValues: {
-      name: user?.name || "",
+      name: profile ? `${profile.first_name} ${profile.last_name}`.trim() : "",
       email: user?.email || "",
-      contact: currentEmployee?.contact || "",
+      contact: profile?.contact || "",
     },
   });
 
   const onAccountSubmit = (data: any) => {
-    if (currentEmployee && user?.employeeId) {
-      updateEmployee(user.employeeId, {
+    if (profile && user) {
+      updateEmployee(profile.employee_id, {
         name: data.name,
         email: data.email,
         contact: data.contact,
@@ -88,7 +87,6 @@ const SettingsPage: React.FC = () => {
     return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
   }
 
-  // Ensure we have settings before rendering the form components
   if (!settings) {
     return <div className="flex justify-center items-center min-h-screen">Error loading settings</div>;
   }
