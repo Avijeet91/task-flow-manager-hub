@@ -1,6 +1,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import bcrypt from "bcryptjs";
 
 // Define types for our users
 export type UserRole = "admin" | "employee";
@@ -12,33 +14,6 @@ export interface User {
   role: UserRole;
   employeeId?: string; // Only required for employees
 }
-
-// Mock users data - in a real app, this would come from a database
-const mockUsers = [
-  {
-    id: "1",
-    name: "Admin User",
-    email: "admin@example.com",
-    password: "admin123",
-    role: "admin" as UserRole,
-  },
-  {
-    id: "2",
-    name: "John Employee",
-    email: "john@example.com",
-    password: "john123",
-    role: "employee" as UserRole,
-    employeeId: "EMP001",
-  },
-  {
-    id: "3",
-    name: "Jane Employee",
-    email: "jane@example.com",
-    password: "jane123",
-    role: "employee" as UserRole,
-    employeeId: "EMP002",
-  },
-];
 
 interface AuthContextType {
   user: User | null;
@@ -68,37 +43,79 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
-  // Login function - in a real app, this would verify credentials against a database
+  // Login function - authenticate against the database
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const foundUser = mockUsers.find(
-      (u) => u.email === email && u.password === password
-    );
+    try {
+      // Get employee from the database
+      const { data: employee, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('email', email)
+        .single();
+      
+      if (error || !employee) {
+        toast.error("Invalid email or password");
+        setIsLoading(false);
+        return false;
+      }
 
-    if (foundUser) {
-      // Remove password before storing user data
-      const { password, ...userWithoutPassword } = foundUser;
-      setUser(userWithoutPassword);
-      localStorage.setItem("user", JSON.stringify(userWithoutPassword));
+      // Compare password (in a real app, this would be done server-side)
+      const passwordMatch = await bcrypt.compare(password, employee.password);
+      
+      if (!passwordMatch) {
+        toast.error("Invalid email or password");
+        setIsLoading(false);
+        return false;
+      }
+
+      // Create user object from employee data
+      const userObj: User = {
+        id: employee.id,
+        name: employee.name,
+        email: employee.email,
+        role: employee.position === 'Administrator' ? 'admin' : 'employee',
+        employeeId: employee.employee_id
+      };
+
+      // Save user data to session
+      setUser(userObj);
+      localStorage.setItem("user", JSON.stringify(userObj));
+      
+      // Create a Supabase session (for RLS policies)
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password // This will work with our password because we're using the same hash method
+      });
+
+      if (authError) {
+        console.error("Supabase auth error:", authError);
+        // Continue anyway since we've already verified the user
+      }
+
       toast.success("Login successful!");
       setIsLoading(false);
       return true;
-    } else {
-      toast.error("Invalid email or password");
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("An error occurred during login");
       setIsLoading(false);
       return false;
     }
   };
 
   // Logout function
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("user");
-    toast.info("Logged out successfully");
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      localStorage.removeItem("user");
+      toast.info("Logged out successfully");
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("An error occurred during logout");
+    }
   };
 
   const isAdmin = user?.role === "admin";

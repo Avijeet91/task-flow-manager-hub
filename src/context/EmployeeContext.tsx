@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface Employee {
   id: string;
@@ -14,61 +15,58 @@ export interface Employee {
   contact: string;
 }
 
-// Mock employees data
-const initialEmployees: Employee[] = [
-  {
-    id: "2",
-    employeeId: "EMP001",
-    name: "John Employee",
-    email: "john@example.com",
-    position: "Senior Developer",
-    department: "Engineering",
-    joinDate: "2022-01-15",
-    contact: "+1234567890",
-  },
-  {
-    id: "3",
-    employeeId: "EMP002",
-    name: "Jane Employee",
-    email: "jane@example.com",
-    position: "Marketing Specialist",
-    department: "Marketing",
-    joinDate: "2022-03-10",
-    contact: "+1987654321",
-  },
-];
-
 interface EmployeeContextType {
   employees: Employee[];
-  addEmployee: (employee: Omit<Employee, "id">) => void;
-  updateEmployee: (employeeId: string, updates: Partial<Employee>) => void;
-  deleteEmployee: (employeeId: string) => void;
+  addEmployee: (employee: Omit<Employee, "id">) => Promise<void>;
+  updateEmployee: (employeeId: string, updates: Partial<Employee>) => Promise<void>;
+  deleteEmployee: (employeeId: string) => Promise<void>;
   getEmployeeById: (employeeId: string) => Employee | undefined;
   getEmployeeByUserId: (userId: string) => Employee | undefined;
+  fetchEmployees: () => Promise<void>;
 }
 
 const EmployeeContext = createContext<EmployeeContextType | undefined>(undefined);
 
 export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const { user, isAdmin } = useAuth();
 
-  // Load employees from localStorage on initial load
+  // Load employees from database on initial load
   useEffect(() => {
-    const storedEmployees = localStorage.getItem("employees");
-    if (storedEmployees) {
-      try {
-        setEmployees(JSON.parse(storedEmployees));
-      } catch (error) {
-        console.error("Failed to parse stored employees:", error);
-      }
+    if (user) {
+      fetchEmployees();
     }
-  }, []);
+  }, [user]);
 
-  // Save employees to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem("employees", JSON.stringify(employees));
-  }, [employees]);
+  // Fetch employees from the database
+  const fetchEmployees = async () => {
+    try {
+      const { data, error } = await supabase.from('employees').select('*');
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        // Map database format to our interface format
+        const formattedEmployees: Employee[] = data.map(emp => ({
+          id: emp.id,
+          employeeId: emp.employee_id,
+          name: emp.name,
+          email: emp.email,
+          position: emp.position || '',
+          department: emp.department || '',
+          joinDate: emp.join_date || new Date().toISOString().split('T')[0],
+          contact: emp.contact || '',
+        }));
+        
+        setEmployees(formattedEmployees);
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      toast.error('Failed to load employees');
+    }
+  };
 
   // Get an employee by their employeeId
   const getEmployeeById = (employeeId: string) => {
@@ -81,66 +79,135 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Add a new employee
-  const addEmployee = (employee: Omit<Employee, "id">) => {
+  const addEmployee = async (employee: Omit<Employee, "id">) => {
     if (!isAdmin) {
       toast.error("Only admins can add employees");
       return;
     }
 
-    // Check if employee ID already exists
-    if (employees.some((emp) => emp.employeeId === employee.employeeId)) {
-      toast.error("Employee ID already exists");
-      return;
+    try {
+      // Check if employee ID already exists
+      if (employees.some((emp) => emp.employeeId === employee.employeeId)) {
+        toast.error("Employee ID already exists");
+        return;
+      }
+
+      // Insert employee into database
+      const { data, error } = await supabase.from('employees').insert({
+        employee_id: employee.employeeId,
+        name: employee.name,
+        email: employee.email,
+        password: await bcrypt.hash('password123', 10), // Default password, should be changed
+        position: employee.position,
+        department: employee.department,
+        join_date: employee.joinDate,
+        contact: employee.contact
+      }).select();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data && data[0]) {
+        const newEmployee: Employee = {
+          id: data[0].id,
+          employeeId: data[0].employee_id,
+          name: data[0].name,
+          email: data[0].email,
+          position: data[0].position || '',
+          department: data[0].department || '',
+          joinDate: data[0].join_date || new Date().toISOString().split('T')[0],
+          contact: data[0].contact || '',
+        };
+
+        setEmployees(prev => [...prev, newEmployee]);
+        toast.success("Employee added successfully");
+      }
+    } catch (error) {
+      console.error('Error adding employee:', error);
+      toast.error('Failed to add employee');
     }
-
-    // Generate a unique user ID
-    const newId = `user${Date.now()}`;
-    
-    const newEmployee: Employee = {
-      id: newId,
-      ...employee,
-    };
-
-    setEmployees((prevEmployees) => [...prevEmployees, newEmployee]);
-    toast.success("Employee added successfully");
   };
 
   // Update an employee
-  const updateEmployee = (employeeId: string, updates: Partial<Employee>) => {
+  const updateEmployee = async (employeeId: string, updates: Partial<Employee>) => {
     if (!isAdmin) {
       toast.error("Only admins can update employees");
       return;
     }
 
-    // Check if updating to an existing employee ID
-    if (
-      updates.employeeId &&
-      updates.employeeId !== employeeId &&
-      employees.some((emp) => emp.employeeId === updates.employeeId)
-    ) {
-      toast.error("Employee ID already exists");
-      return;
-    }
+    try {
+      // Check if updating to an existing employee ID
+      if (
+        updates.employeeId &&
+        updates.employeeId !== employeeId &&
+        employees.some((emp) => emp.employeeId === updates.employeeId)
+      ) {
+        toast.error("Employee ID already exists");
+        return;
+      }
 
-    setEmployees((prevEmployees) =>
-      prevEmployees.map((emp) =>
-        emp.employeeId === employeeId ? { ...emp, ...updates } : emp
-      )
-    );
-    toast.success("Employee updated successfully");
+      // Format updates for database
+      const dbUpdates: any = {};
+      if (updates.name) dbUpdates.name = updates.name;
+      if (updates.email) dbUpdates.email = updates.email;
+      if (updates.position) dbUpdates.position = updates.position;
+      if (updates.department) dbUpdates.department = updates.department;
+      if (updates.joinDate) dbUpdates.join_date = updates.joinDate;
+      if (updates.contact) dbUpdates.contact = updates.contact;
+
+      // Update employee in database
+      const { error } = await supabase
+        .from('employees')
+        .update(dbUpdates)
+        .eq('employee_id', employeeId);
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setEmployees(prevEmployees =>
+        prevEmployees.map(emp =>
+          emp.employeeId === employeeId ? { ...emp, ...updates } : emp
+        )
+      );
+      
+      toast.success("Employee updated successfully");
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      toast.error('Failed to update employee');
+    }
   };
 
   // Delete an employee
-  const deleteEmployee = (employeeId: string) => {
+  const deleteEmployee = async (employeeId: string) => {
     if (!isAdmin) {
       toast.error("Only admins can delete employees");
       return;
     }
 
-    setEmployees((prevEmployees) =>
-      prevEmployees.filter((emp) => emp.employeeId !== employeeId)
-    );
-    toast.success("Employee deleted successfully");
+    try {
+      // Delete employee from database
+      const { error } = await supabase
+        .from('employees')
+        .delete()
+        .eq('employee_id', employeeId);
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setEmployees(prevEmployees =>
+        prevEmployees.filter(emp => emp.employeeId !== employeeId)
+      );
+      
+      toast.success("Employee deleted successfully");
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+      toast.error('Failed to delete employee');
+    }
   };
 
   return (
@@ -152,6 +219,7 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         deleteEmployee,
         getEmployeeById,
         getEmployeeByUserId,
+        fetchEmployees
       }}
     >
       {children}
