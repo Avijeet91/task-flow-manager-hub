@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { toast } from "sonner";
@@ -58,6 +59,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!user) return;
       
+      console.log("Fetching tasks with user:", user.id);
+      console.log("User profile:", profile);
+      
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .select('*')
@@ -66,7 +70,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (tasksError) throw tasksError;
       if (!tasksData) return;
 
-      console.log("Fetched tasks:", tasksData);
+      console.log("Fetched tasks from DB:", tasksData);
       
       const { data: commentsData, error: commentsError } = await supabase
         .from('task_comments')
@@ -104,6 +108,10 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setTasks(formattedTasks);
       console.log("Formatted and set tasks:", formattedTasks);
+      
+      // Log all assignedTo values for debugging
+      const assignedToValues = formattedTasks.map(t => t.assignedTo);
+      console.log("All assignedTo values:", assignedToValues);
     } catch (error) {
       console.error('Error fetching tasks:', error);
       toast.error('Failed to load tasks');
@@ -128,7 +136,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? tasks.filter((task) => task.assignedTo === employeeId)
         : tasks;
     } else {
-      // Get all possible IDs this employee might be identified by
+      // IMPROVED MATCHING ALGORITHM
+      
+      // 1. Get all possible IDs this employee might be identified by
       const possibleEmployeeIds = [
         user.id, // UUID
         user.employeeId, // Employee ID from user object
@@ -139,38 +149,57 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log("Possible employee IDs to check:", possibleEmployeeIds);
       
-      // Enhanced matching algorithm - check ALL tasks for possible matches
+      // 2. Debug logging for each task's assignedTo value
+      tasks.forEach(task => {
+        console.log(`Task ${task.id} is assigned to: "${task.assignedTo}" (${task.assignedToName})`);
+      });
+      
+      // 3. Use a more robust matching algorithm
       return tasks.filter(task => {
+        if (!task.assignedTo) return false;
+        
         // Normalize the task assignedTo for comparison
         const normalizedTaskAssignedTo = task.assignedTo.trim().toLowerCase();
         
+        // Try exact match with employeeId (highest priority)
+        if (user.employeeId && normalizedTaskAssignedTo === user.employeeId.toLowerCase()) {
+          console.log(`Task ${task.id} matched with user.employeeId (exact): ${user.employeeId}`);
+          return true;
+        }
+        
+        // Try exact match with profile employee_id
+        if (profile?.employee_id && normalizedTaskAssignedTo === profile.employee_id.toLowerCase()) {
+          console.log(`Task ${task.id} matched with profile.employee_id (exact): ${profile.employee_id}`);
+          return true;
+        }
+        
         // Check if any of the possible IDs match with the task's assignedTo
         for (const id of possibleEmployeeIds) {
+          if (!id) continue;
           const normalizedId = id.trim().toLowerCase();
           
           // Exact match
           if (normalizedTaskAssignedTo === normalizedId) {
-            console.log(`Found exact match for task ${task.id} with ID ${id}`);
+            console.log(`Task ${task.id} matched exactly with ID: ${id}`);
             return true;
           }
           
-          // Case-insensitive match with the employee ID (most important)
-          if (normalizedTaskAssignedTo === user.employeeId?.toLowerCase() || 
-              normalizedTaskAssignedTo === profile?.employee_id?.toLowerCase()) {
-            console.log(`Found case-insensitive employee ID match for task ${task.id}`);
-            return true;
-          }
-          
-          // Handle potential prefixes/suffixes in the assignedTo field
+          // Part of string match (for when IDs might be embedded in other values)
           if (normalizedTaskAssignedTo.includes(normalizedId)) {
-            console.log(`Found partial match for task ${task.id} with ID ${id}`);
+            console.log(`Task ${task.id} matched partially with ID: ${id}`);
             return true;
           }
         }
         
-        // Special case: directly check for employee ID that might be in different formats
-        if (user.employeeId && task.assignedTo.includes(user.employeeId)) {
-          console.log(`Found direct employee ID match for task ${task.id}`);
+        // Special direct check for EMP prefixed IDs
+        if (user.employeeId?.startsWith('EMP') && task.assignedTo.includes(user.employeeId)) {
+          console.log(`Task ${task.id} matched with EMP prefix ID: ${user.employeeId}`);
+          return true;
+        }
+        
+        // Check if task is assigned directly to user ID
+        if (user.id && task.assignedTo === user.id) {
+          console.log(`Task ${task.id} matched with user.id: ${user.id}`);
           return true;
         }
         

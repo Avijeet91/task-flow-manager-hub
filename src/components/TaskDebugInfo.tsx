@@ -35,9 +35,9 @@ const TaskDebugInfo = () => {
   const tasksWithUserIdCI = tasks.filter(task => 
     task.assignedTo.toLowerCase() === userId.toLowerCase());
   const tasksWithEmployeeIdCI = tasks.filter(task => 
-    task.assignedTo.toLowerCase() === employeeId.toLowerCase());
+    employeeId && task.assignedTo.toLowerCase() === employeeId.toLowerCase());
   const tasksWithProfileIdCI = tasks.filter(task => 
-    task.assignedTo.toLowerCase() === profileEmployeeId.toLowerCase());
+    profileEmployeeId && task.assignedTo.toLowerCase() === profileEmployeeId.toLowerCase());
   
   // 3. Contains matching (partial matches)
   const tasksWithUserIdContains = tasks.filter(task => 
