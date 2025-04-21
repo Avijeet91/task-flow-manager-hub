@@ -26,10 +26,10 @@ const Tasks = () => {
     fetchTasks();
     
     // Log debug info to help diagnose task assignment issues
-    console.log("Current user:", user);
-    console.log("Current profile:", profile);
-    console.log("Is admin:", isAdmin);
-    console.log("All tasks:", tasks);
+    console.log("Tasks page - Current user:", user);
+    console.log("Tasks page - Current profile:", profile);
+    console.log("Tasks page - Is admin:", isAdmin);
+    console.log("Tasks page - All tasks:", tasks);
   }, []);
   
   // Force a refresh of tasks when user or profile changes

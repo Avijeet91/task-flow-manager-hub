@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTask } from "@/context/TaskContext";
@@ -44,6 +45,7 @@ const CreateTask = () => {
   const handleSelectChange = (name: string, value: string) => {
     if (name === "assignedTo") {
       const selectedEmployee = employees.find((emp) => emp.employeeId === value);
+      console.log("Selected employee:", selectedEmployee);
       setFormData((prev) => ({
         ...prev,
         assignedTo: value,
@@ -54,7 +56,7 @@ const CreateTask = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.title || !formData.description || !formData.assignedTo || !formData.dueDate) {
@@ -67,22 +69,31 @@ const CreateTask = () => {
       return;
     }
 
+    console.log("Form data before submission:", formData);
+    console.log("Creating task with assignedTo:", formData.assignedTo);
+    
     const adminName = profile ? `${profile.first_name} ${profile.last_name}`.trim() : "Admin";
     
-    addTask({
-      title: formData.title,
-      description: formData.description,
-      assignedTo: formData.assignedTo,
-      assignedToName: formData.assignedToName,
-      assignedBy: user.id,
-      assignedByName: adminName,
-      status: formData.status as any,
-      priority: formData.priority as any,
-      dueDate: new Date(formData.dueDate).toISOString(),
-      progress: 0,
-    });
-
-    navigate("/tasks");
+    try {
+      await addTask({
+        title: formData.title,
+        description: formData.description,
+        assignedTo: formData.assignedTo,
+        assignedToName: formData.assignedToName,
+        assignedBy: user.id,
+        assignedByName: adminName,
+        status: formData.status as any,
+        priority: formData.priority as any,
+        dueDate: new Date(formData.dueDate).toISOString(),
+        progress: 0,
+      });
+      
+      toast.success("Task created successfully");
+      navigate("/tasks");
+    } catch (error) {
+      console.error("Error creating task:", error);
+      toast.error("Failed to create task");
+    }
   };
 
   return (

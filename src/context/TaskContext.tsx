@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { toast } from "sonner";
@@ -103,6 +104,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       setTasks(formattedTasks);
+      console.log("Formatted and set tasks:", formattedTasks);
     } catch (error) {
       console.error('Error fetching tasks:', error);
       toast.error('Failed to load tasks');
@@ -137,12 +139,24 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log("Possible employee IDs to check:", possibleEmployeeIds);
       
-      // Find tasks assigned to any of the possible IDs
+      // Find tasks assigned to any of the possible IDs (with improved matching)
       const employeeTasks = tasks.filter((task) => {
-        return possibleEmployeeIds.some(id => 
-          task.assignedTo === id || 
+        // Direct matching (any of the possible IDs matches exactly with task.assignedTo)
+        const directMatch = possibleEmployeeIds.some(id => 
+          task.assignedTo === id
+        );
+        
+        // Case-insensitive matching
+        const caseInsensitiveMatch = possibleEmployeeIds.some(id => 
           task.assignedTo.toLowerCase() === id.toLowerCase()
         );
+        
+        // Partial matching (task.assignedTo contains any of the possible IDs)
+        const partialMatch = possibleEmployeeIds.some(id => 
+          task.assignedTo.includes(id)
+        );
+        
+        return directMatch || caseInsensitiveMatch || partialMatch;
       });
       
       console.log("Filtered employee tasks:", employeeTasks);

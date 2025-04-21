@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   CheckCircle2, 
@@ -16,12 +16,20 @@ import { useTask, Task } from "@/context/TaskContext";
 import { useAuth } from "@/context/AuthContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import TaskCard from "@/components/TaskCard";
+import TaskDebugInfo from "@/components/TaskDebugInfo";
 
 const Dashboard = () => {
-  const { getUserTasks, tasks } = useTask();
-  const { user, isAdmin } = useAuth();
+  const { getUserTasks, tasks, fetchTasks } = useTask();
+  const { user, isAdmin, profile } = useAuth();
   const { employees } = useEmployee();
   const navigate = useNavigate();
+  
+  // Refresh tasks when component mounts and when user/profile changes
+  useEffect(() => {
+    fetchTasks();
+    console.log("Dashboard - Refreshing tasks");
+  }, [user, profile]);
+  
   const userTasks = getUserTasks();
 
   // Filter tasks by status
@@ -48,6 +56,9 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
+      {/* Debug info - will only show in development mode */}
+      <TaskDebugInfo />
+    
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
