@@ -15,21 +15,27 @@ import { useAuth } from "@/context/AuthContext";
 import TaskCard from "@/components/TaskCard";
 import TaskDebugInfo from "@/components/TaskDebugInfo";
 import { Plus, Search } from "lucide-react";
+import { toast } from "sonner";
 
 const Tasks = () => {
   const { getUserTasks, fetchTasks, tasks } = useTask();
   const { isAdmin, user, profile } = useAuth();
   const navigate = useNavigate();
   
-  // Force fetch tasks when component mounts and when user/profile changes
+  // Force fetch tasks when component mounts
   useEffect(() => {
     console.log("Tasks component - Fetching tasks on mount");
-    fetchTasks();
-  }, []);
+    if (user) {
+      fetchTasks();
+    }
+  }, [user]);
   
+  // Refresh tasks when profile changes
   useEffect(() => {
     if (user && profile) {
       console.log("Tasks component - User or profile changed, refreshing tasks");
+      console.log("Current user:", user);
+      console.log("Current profile:", profile);
       fetchTasks();
     }
   }, [user, profile]);

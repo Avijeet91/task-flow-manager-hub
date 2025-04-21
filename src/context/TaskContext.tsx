@@ -59,9 +59,10 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!user) return;
       
-      console.log("Fetching tasks with user:", user.id);
+      console.log("Fetching tasks with user:", user);
       console.log("User profile:", profile);
       
+      // Fetch all tasks from the database
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .select('*')
@@ -72,6 +73,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log("Fetched tasks from DB:", tasksData);
       
+      // Fetch all comments
       const { data: commentsData, error: commentsError } = await supabase
         .from('task_comments')
         .select('*')
@@ -79,6 +81,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (commentsError) throw commentsError;
 
+      // Format the tasks data
       const formattedTasks: Task[] = tasksData.map((task) => {
         const taskComments = commentsData?.filter(c => c.task_id === task.id) || [];
         
@@ -121,13 +124,13 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const getUserTasks = (employeeId?: string) => {
     if (!user) return [];
 
-    // For debugging
+    // Enhanced debugging logs
     console.log("Getting tasks for user:", user);
     console.log("User profile:", profile);
     console.log("User role:", user.role);
-    console.log("Employee ID from params:", employeeId);
-    console.log("User employee ID:", user.employeeId);
-    console.log("Profile employee ID:", profile?.employee_id);
+    console.log("Param employeeId:", employeeId);
+    console.log("User employeeId:", user.employeeId);
+    console.log("Profile employee_id:", profile?.employee_id);
     console.log("All tasks:", tasks);
 
     // For admin users, return all tasks or filter by employeeId if provided
@@ -136,7 +139,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? tasks.filter((task) => task.assignedTo === employeeId)
         : tasks;
     } else {
-      // IMPROVED MATCHING ALGORITHM
+      // IMPROVED TASK MATCHING ALGORITHM
       
       // 1. Get all possible IDs this employee might be identified by
       const possibleEmployeeIds = [
@@ -144,7 +147,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user.employeeId, // Employee ID from user object
         profile?.employee_id, // Employee ID from profile
         employeeId, // Employee ID from function params
-        user.email?.split('@')[0], // Username part of email as fallback
+        user.email?.split('@')[0], // Username part of email
       ].filter(Boolean) as string[];
       
       console.log("Possible employee IDs to check:", possibleEmployeeIds);
@@ -154,53 +157,70 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log(`Task ${task.id} is assigned to: "${task.assignedTo}" (${task.assignedToName})`);
       });
       
-      // 3. Use a more robust matching algorithm
+      // 3. Try multiple matching strategies
       return tasks.filter(task => {
+        // Skip if assignedTo is empty
         if (!task.assignedTo) return false;
         
         // Normalize the task assignedTo for comparison
         const normalizedTaskAssignedTo = task.assignedTo.trim().toLowerCase();
         
-        // Try exact match with employeeId (highest priority)
-        if (user.employeeId && normalizedTaskAssignedTo === user.employeeId.toLowerCase()) {
-          console.log(`Task ${task.id} matched with user.employeeId (exact): ${user.employeeId}`);
-          return true;
-        }
-        
-        // Try exact match with profile employee_id
-        if (profile?.employee_id && normalizedTaskAssignedTo === profile.employee_id.toLowerCase()) {
-          console.log(`Task ${task.id} matched with profile.employee_id (exact): ${profile.employee_id}`);
-          return true;
-        }
-        
-        // Check if any of the possible IDs match with the task's assignedTo
+        // Check for exact matches with all possible IDs
         for (const id of possibleEmployeeIds) {
           if (!id) continue;
+          
           const normalizedId = id.trim().toLowerCase();
           
-          // Exact match
+          // Exact match - highest priority
           if (normalizedTaskAssignedTo === normalizedId) {
             console.log(`Task ${task.id} matched exactly with ID: ${id}`);
             return true;
           }
           
-          // Part of string match (for when IDs might be embedded in other values)
+          // Check if task.assignedTo contains the ID as a substring
           if (normalizedTaskAssignedTo.includes(normalizedId)) {
-            console.log(`Task ${task.id} matched partially with ID: ${id}`);
+            console.log(`Task ${task.id} contains ID as substring: ${id}`);
+            return true;
+          }
+          
+          // Check if ID contains the task.assignedTo as a substring
+          if (normalizedId.includes(normalizedTaskAssignedTo)) {
+            console.log(`Task ${task.id} is substring of ID: ${id}`);
             return true;
           }
         }
         
-        // Special direct check for EMP prefixed IDs
-        if (user.employeeId?.startsWith('EMP') && task.assignedTo.includes(user.employeeId)) {
-          console.log(`Task ${task.id} matched with EMP prefix ID: ${user.employeeId}`);
-          return true;
+        // Special case for handling EMP prefixed IDs without the EMP prefix
+        if (user.employeeId?.startsWith('EMP')) {
+          const numericPart = user.employeeId.replace('EMP', '');
+          if (normalizedTaskAssignedTo.includes(numericPart)) {
+            console.log(`Task ${task.id} matched with numeric part of employee ID: ${numericPart}`);
+            return true;
+          }
         }
         
-        // Check if task is assigned directly to user ID
-        if (user.id && task.assignedTo === user.id) {
-          console.log(`Task ${task.id} matched with user.id: ${user.id}`);
-          return true;
+        // If profile has employee_id that starts with EMP
+        if (profile?.employee_id?.startsWith('EMP')) {
+          const numericPart = profile.employee_id.replace('EMP', '');
+          if (normalizedTaskAssignedTo.includes(numericPart)) {
+            console.log(`Task ${task.id} matched with numeric part of profile employee ID: ${numericPart}`);
+            return true;
+          }
+        }
+        
+        // If assignedTo starts with EMP, try matching with just the numeric part
+        if (task.assignedTo.startsWith('EMP')) {
+          const numericPart = task.assignedTo.replace('EMP', '');
+          const employeeIdWithoutPrefix = user.employeeId?.replace('EMP', '') || '';
+          const profileIdWithoutPrefix = profile?.employee_id?.replace('EMP', '') || '';
+          
+          if (
+            employeeIdWithoutPrefix && numericPart === employeeIdWithoutPrefix ||
+            profileIdWithoutPrefix && numericPart === profileIdWithoutPrefix
+          ) {
+            console.log(`Task ${task.id} matched after removing EMP prefix`);
+            return true;
+          }
         }
         
         return false;

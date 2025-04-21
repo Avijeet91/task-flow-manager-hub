@@ -14,22 +14,28 @@ import { useAuth } from "@/context/AuthContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import TaskCard from "@/components/TaskCard";
 import TaskDebugInfo from "@/components/TaskDebugInfo";
+import { toast } from "sonner";
 
 const Dashboard = () => {
-  const { getUserTasks, tasks, fetchTasks } = useTask();
+  const { getUserTasks, fetchTasks, tasks } = useTask();
   const { user, isAdmin, profile } = useAuth();
   const { employees } = useEmployee();
   const navigate = useNavigate();
   
-  // Force fetch tasks on component mount and when user/profile changes
+  // Force fetch tasks on component mount
   useEffect(() => {
     console.log("Dashboard - Fetching tasks on mount");
-    fetchTasks();
-  }, []);
+    if (user) {
+      fetchTasks();
+    }
+  }, [user]);
   
+  // Refresh tasks when profile changes
   useEffect(() => {
     if (user && profile) {
       console.log("Dashboard - User or profile changed, refreshing tasks");
+      console.log("Dashboard - Current user:", user);
+      console.log("Dashboard - Current profile:", profile);
       fetchTasks();
     }
   }, [user, profile]);
@@ -62,7 +68,7 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Debug info - will only show in development mode */}
+      {/* Enhanced Debug info - will only show in development mode */}
       <TaskDebugInfo />
     
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">

@@ -24,34 +24,9 @@ const TaskDebugInfo = () => {
   const profileEmployeeId = profile?.employee_id || 'Not available';
   const emailUsername = user?.email ? user.email.split('@')[0] : 'Not available';
 
-  // Enhanced task matching checking
-  // 1. Direct exact matches
-  const tasksWithUserIdExact = tasks.filter(task => task.assignedTo === userId);
-  const tasksWithEmployeeIdExact = tasks.filter(task => task.assignedTo === employeeId);
-  const tasksWithProfileIdExact = tasks.filter(task => task.assignedTo === profileEmployeeId);
-  const tasksWithEmailUsernameExact = tasks.filter(task => task.assignedTo === emailUsername);
-  
-  // 2. Case insensitive matching
-  const tasksWithUserIdCI = tasks.filter(task => 
-    task.assignedTo.toLowerCase() === userId.toLowerCase());
-  const tasksWithEmployeeIdCI = tasks.filter(task => 
-    employeeId && task.assignedTo.toLowerCase() === employeeId.toLowerCase());
-  const tasksWithProfileIdCI = tasks.filter(task => 
-    profileEmployeeId && task.assignedTo.toLowerCase() === profileEmployeeId.toLowerCase());
-  
-  // 3. Contains matching (partial matches)
-  const tasksWithUserIdContains = tasks.filter(task => 
-    task.assignedTo.includes(userId));
-  const tasksWithEmployeeIdContains = tasks.filter(task => 
-    employeeId && task.assignedTo.includes(employeeId));
-  const tasksWithProfileIdContains = tasks.filter(task => 
-    profileEmployeeId && task.assignedTo.includes(profileEmployeeId));
-  const tasksWithEmailUsernameContains = tasks.filter(task =>
-    emailUsername && task.assignedTo.includes(emailUsername));
-    
-  // 4. Special check for the exact employee IDs in the tasks
+  // Get all available assignedTo values
   const uniqueAssignedToValues = [...new Set(tasks.map(task => task.assignedTo))];
-
+  
   return (
     <Card className="mb-4 bg-slate-50">
       <CardHeader>
@@ -63,13 +38,7 @@ const TaskDebugInfo = () => {
             <strong>User ID:</strong> {userId}
           </div>
           <div>
-            <strong>User Role:</strong> {user?.role || 'Unknown'}
-          </div>
-          <div>
-            <strong>Is Admin:</strong> {isAdmin ? 'Yes' : 'No'}
-          </div>
-          <div>
-            <strong>User Employee ID:</strong> {employeeId}
+            <strong>Employee ID:</strong> {employeeId}
           </div>
           <div>
             <strong>Profile Employee ID:</strong> {profileEmployeeId}
@@ -77,64 +46,26 @@ const TaskDebugInfo = () => {
           <div>
             <strong>Email Username:</strong> {emailUsername}
           </div>
-          <div>
+          
+          <div className="pt-2 border-t border-gray-200">
             <strong>Total Tasks in System:</strong> {tasks.length}
           </div>
           
           <div className="pt-2 border-t border-gray-200">
-            <strong>Exact Matches:</strong>
-          </div>
-          <div>
-            <strong>• Tasks with User ID:</strong> {tasksWithUserIdExact.length}
-          </div>
-          <div>
-            <strong>• Tasks with Employee ID:</strong> {tasksWithEmployeeIdExact.length}
-          </div>
-          <div>
-            <strong>• Tasks with Profile Employee ID:</strong> {tasksWithProfileIdExact.length}
-          </div>
-          <div>
-            <strong>• Tasks with Email Username:</strong> {tasksWithEmailUsernameExact.length}
+            <strong>Unique AssignedTo Values:</strong> {uniqueAssignedToValues.join(', ') || 'None'}
           </div>
           
           <div className="pt-2 border-t border-gray-200">
-            <strong>Case Insensitive Matches:</strong>
-          </div>
-          <div>
-            <strong>• Tasks with User ID (CI):</strong> {tasksWithUserIdCI.length}
-          </div>
-          <div>
-            <strong>• Tasks with Employee ID (CI):</strong> {tasksWithEmployeeIdCI.length}
-          </div>
-          <div>
-            <strong>• Tasks with Profile ID (CI):</strong> {tasksWithProfileIdCI.length}
-          </div>
-          
-          <div className="pt-2 border-t border-gray-200">
-            <strong>Partial Matches:</strong>
-          </div>
-          <div>
-            <strong>• Tasks with User ID (contains):</strong> {tasksWithUserIdContains.length}
-          </div>
-          <div>
-            <strong>• Tasks with Employee ID (contains):</strong> {tasksWithEmployeeIdContains.length}
-          </div>
-          <div>
-            <strong>• Tasks with Profile ID (contains):</strong> {tasksWithProfileIdContains.length}
-          </div>
-          <div>
-            <strong>• Tasks with Email Username (contains):</strong> {tasksWithEmailUsernameContains.length}
-          </div>
-          
-          <div className="pt-2 border-t border-gray-200">
-            <strong>Unique AssignedTo Values:</strong> {uniqueAssignedToValues.join(', ')}
-          </div>
-          
-          <div className="pt-2 border-t border-gray-200">
-            <strong>All Task IDs with their AssignedTo:</strong>
+            <strong>All Tasks:</strong>
           </div>
           {tasks.map(task => (
-            <div key={task.id}>• {task.id}: {task.assignedTo} ({task.assignedToName})</div>
+            <div key={task.id} className="pl-2 border-l-2 border-gray-300 mb-2">
+              <div><strong>ID:</strong> {task.id}</div>
+              <div><strong>Title:</strong> {task.title}</div>
+              <div><strong>AssignedTo:</strong> "{task.assignedTo}"</div>
+              <div><strong>AssignedToName:</strong> {task.assignedToName}</div>
+              <div><strong>Status:</strong> {task.status}</div>
+            </div>
           ))}
         </div>
       </CardContent>
