@@ -1,6 +1,5 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { User, UserSession } from "@supabase/supabase-js";
+import { User, Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -29,7 +28,7 @@ export interface ExtendedUser extends User {
 
 interface AuthContextType {
   user: ExtendedUser | null;
-  session: UserSession | null;
+  session: Session | null;
   profile: UserProfile | null;
   login: (email: string, password: string) => Promise<boolean>;
   signup: (email: string, password: string, userData: Record<string, any>) => Promise<boolean>;
@@ -42,7 +41,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<ExtendedUser | null>(null);
-  const [session, setSession] = useState<UserSession | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userRoles, setUserRoles] = useState<string[]>([]);
