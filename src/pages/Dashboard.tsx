@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -22,27 +21,23 @@ const Dashboard = () => {
   const { employees } = useEmployee();
   const navigate = useNavigate();
   
-  // Force fetch tasks on component mount
+  // Fetch tasks on mount and whenever user/profile changes
   useEffect(() => {
-    console.log("Dashboard - Fetching tasks on mount");
-    if (user) {
-      fetchTasks();
-    }
-  }, [user]);
+    const loadTasks = async () => {
+      if (user) {
+        console.log("Dashboard - Initiating task fetch");
+        await fetchTasks();
+        console.log("Dashboard - Tasks fetched successfully");
+      }
+    };
+    
+    loadTasks();
+  }, [user, profile, fetchTasks]);
   
-  // Refresh tasks when profile changes
-  useEffect(() => {
-    if (user && profile) {
-      console.log("Dashboard - User or profile changed, refreshing tasks");
-      console.log("Dashboard - Current user:", user);
-      console.log("Dashboard - Current profile:", profile);
-      fetchTasks();
-    }
-  }, [user, profile]);
-  
-  // Get user's tasks with logging
+  // Get user's tasks with improved logging
+  console.log("Dashboard - About to call getUserTasks()");
   const userTasks = getUserTasks();
-  console.log("Dashboard - User tasks:", userTasks);
+  console.log("Dashboard - User tasks returned:", userTasks.length, userTasks);
 
   // Filter tasks by status
   const pendingTasks = userTasks.filter((task) => task.status === "pending");

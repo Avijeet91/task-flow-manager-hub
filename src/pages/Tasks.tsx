@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -22,27 +21,25 @@ const Tasks = () => {
   const { isAdmin, user, profile } = useAuth();
   const navigate = useNavigate();
   
-  // Force fetch tasks when component mounts
+  // Force fetch tasks when component mounts and when user/profile changes
   useEffect(() => {
-    console.log("Tasks component - Fetching tasks on mount");
-    if (user) {
-      fetchTasks();
-    }
-  }, [user]);
-  
-  // Refresh tasks when profile changes
-  useEffect(() => {
-    if (user && profile) {
-      console.log("Tasks component - User or profile changed, refreshing tasks");
-      console.log("Current user:", user);
-      console.log("Current profile:", profile);
-      fetchTasks();
-    }
-  }, [user, profile]);
+    const loadTasks = async () => {
+      if (user) {
+        console.log("Tasks component - Initiating task fetch");
+        await fetchTasks();
+        console.log("Tasks component - Tasks fetched successfully");
+        console.log("Tasks component - Current user:", user);
+        console.log("Tasks component - Current profile:", profile);
+      }
+    };
+    
+    loadTasks();
+  }, [user, profile, fetchTasks]);
   
   // Get user's tasks with enhanced debugging
+  console.log("Tasks component - About to call getUserTasks()");
   const allTasks = getUserTasks();
-  console.log("Tasks component - Got user tasks:", allTasks);
+  console.log("Tasks component - Tasks returned from getUserTasks:", allTasks.length, allTasks);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");

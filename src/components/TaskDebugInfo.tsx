@@ -6,17 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const TaskDebugInfo = () => {
   const { user, profile, isAdmin } = useAuth();
-  const { tasks } = useTask();
+  const { tasks, getUserTasks } = useTask();
 
   // Only show in development mode
   if (process.env.NODE_ENV !== 'development') {
     return null;
   }
-
-  // Log some debugging information to help diagnose issues
-  console.log("Debug - User:", user);
-  console.log("Debug - Profile:", profile);
-  console.log("Debug - All tasks:", tasks);
 
   // Get all user identifiers
   const userId = user?.id || 'Not logged in';
@@ -24,8 +19,12 @@ const TaskDebugInfo = () => {
   const profileEmployeeId = profile?.employee_id || 'Not available';
   const emailUsername = user?.email ? user.email.split('@')[0] : 'Not available';
 
+  // Get user tasks to check if they're showing up correctly
+  const userTasksList = getUserTasks();
+  console.log("TaskDebugInfo - User tasks from getUserTasks:", userTasksList);
+
   // Get all available assignedTo values
-  const uniqueAssignedToValues = [...new Set(tasks.map(task => task.assignedTo))];
+  const uniqueAssignedToValues = [...new Set(tasks.map(task => task.assignedTo))].join(', ');
   
   return (
     <Card className="mb-4 bg-slate-50">
@@ -52,7 +51,11 @@ const TaskDebugInfo = () => {
           </div>
           
           <div className="pt-2 border-t border-gray-200">
-            <strong>Unique AssignedTo Values:</strong> {uniqueAssignedToValues.join(', ') || 'None'}
+            <strong>Tasks Assigned to Current User:</strong> {userTasksList.length}
+          </div>
+          
+          <div className="pt-2 border-t border-gray-200">
+            <strong>Unique AssignedTo Values:</strong> {uniqueAssignedToValues || 'None'}
           </div>
           
           <div className="pt-2 border-t border-gray-200">
@@ -65,6 +68,9 @@ const TaskDebugInfo = () => {
               <div><strong>AssignedTo:</strong> "{task.assignedTo}"</div>
               <div><strong>AssignedToName:</strong> {task.assignedToName}</div>
               <div><strong>Status:</strong> {task.status}</div>
+              <div className="text-red-500"><strong>Would match current user:</strong> {
+                userTasksList.some(t => t.id === task.id) ? 'YES' : 'NO'
+              }</div>
             </div>
           ))}
         </div>
