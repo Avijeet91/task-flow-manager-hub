@@ -17,14 +17,14 @@ const TaskDebugInfo = () => {
   const userId = user?.id || 'Not logged in';
   const employeeId = user?.employeeId || 'Not available';
   const profileEmployeeId = profile?.employee_id || 'Not available';
+  const email = user?.email || 'Not available';
   const emailUsername = user?.email ? user.email.split('@')[0] : 'Not available';
 
   // Get user tasks to check if they're showing up correctly
   const userTasksList = getUserTasks();
-  console.log("TaskDebugInfo - User tasks from getUserTasks:", userTasksList);
-
+  
   // Get all available assignedTo values
-  const uniqueAssignedToValues = [...new Set(tasks.map(task => task.assignedTo))].join(', ');
+  const uniqueAssignedToValues = [...new Set(tasks.map(task => task.assignedTo))];
   
   return (
     <Card className="mb-4 bg-slate-50">
@@ -43,6 +43,9 @@ const TaskDebugInfo = () => {
             <strong>Profile Employee ID:</strong> {profileEmployeeId}
           </div>
           <div>
+            <strong>Email:</strong> {email}
+          </div>
+          <div>
             <strong>Email Username:</strong> {emailUsername}
           </div>
           
@@ -55,7 +58,12 @@ const TaskDebugInfo = () => {
           </div>
           
           <div className="pt-2 border-t border-gray-200">
-            <strong>Unique AssignedTo Values:</strong> {uniqueAssignedToValues || 'None'}
+            <strong>Unique AssignedTo Values:</strong> 
+            <div className="pl-2">
+              {uniqueAssignedToValues.map((value, index) => (
+                <div key={index}>{value || '(empty)'}</div>
+              ))}
+            </div>
           </div>
           
           <div className="pt-2 border-t border-gray-200">
@@ -71,6 +79,13 @@ const TaskDebugInfo = () => {
               <div className="text-red-500"><strong>Would match current user:</strong> {
                 userTasksList.some(t => t.id === task.id) ? 'YES' : 'NO'
               }</div>
+              <div className="text-blue-500"><strong>Match details:</strong></div>
+              <div className="pl-2">
+                <div>- Employee ID match: {task.assignedTo === employeeId ? 'YES' : 'NO'}</div>
+                <div>- Profile employee ID match: {task.assignedTo === profileEmployeeId ? 'YES' : 'NO'}</div>
+                <div>- Email match: {task.assignedTo === email ? 'YES' : 'NO'}</div>
+                <div>- Email username in assignedTo: {emailUsername !== 'Not available' && task.assignedTo.includes(emailUsername) ? 'YES' : 'NO'}</div>
+              </div>
             </div>
           ))}
         </div>

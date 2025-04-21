@@ -44,7 +44,7 @@ const CreateTask = () => {
 
   const handleSelectChange = (name: string, value: string) => {
     if (name === "assignedTo") {
-      const selectedEmployee = employees.find((emp) => emp.employeeId === value);
+      const selectedEmployee = employees.find((emp) => emp.employeeId === value || emp.email === value);
       console.log("Selected employee:", selectedEmployee);
       setFormData((prev) => ({
         ...prev,

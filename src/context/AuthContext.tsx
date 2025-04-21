@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User, UserSession } from "@supabase/supabase-js";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ export interface ExtendedUser extends User {
   employeeId?: string;
   name?: string;
   role?: UserRole;
+  email: string; // Make sure email is always included
 }
 
 interface AuthContextType {

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { toast } from "sonner";
@@ -11,7 +12,7 @@ export interface Task {
   id: string;
   title: string;
   description: string;
-  assignedTo: string; // employee ID
+  assignedTo: string; // employee ID or email
   assignedToName: string; // employee name
   assignedBy: string; // admin ID
   assignedByName: string; // admin name
@@ -110,10 +111,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setTasks(formattedTasks);
       console.log("Formatted and set tasks:", formattedTasks);
-      
-      // Log all assignedTo values for debugging
-      const assignedToValues = formattedTasks.map(t => t.assignedTo);
-      console.log("All assignedTo values:", assignedToValues);
     } catch (error) {
       console.error('Error fetching tasks:', error);
       toast.error('Failed to load tasks');
@@ -125,6 +122,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Enhanced debugging logs
     console.log("Getting tasks for user:", user);
+    console.log("User's email:", user.email);
     console.log("User profile:", profile);
     console.log("User role:", user.role);
     console.log("Param employeeId:", employeeId);
@@ -138,57 +136,65 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? tasks.filter((task) => task.assignedTo === employeeId)
         : tasks;
     } else {
-      // FIXED: Simplify the matching logic to focus on the most likely match conditions
-      
-      // Get the current user's employee ID (most reliable source)
+      // Multi-approach task matching for employees
       const userEmployeeId = user.employeeId || profile?.employee_id || '';
+      const userEmail = user.email || '';
       
-      console.log("PRIMARY USER EMPLOYEE ID TO MATCH:", userEmployeeId);
+      console.log("PRIMARY USER IDENTIFIERS TO MATCH:", {
+        employeeId: userEmployeeId,
+        email: userEmail
+      });
       
-      // Simple direct comparison first (most tasks should match this way)
+      // Filter tasks based on multiple identification methods
       const matchedTasks = tasks.filter(task => {
         // Skip empty assignedTo fields
         if (!task.assignedTo) return false;
         
         const taskAssignedTo = task.assignedTo.trim();
         
-        // Direct comparison (case sensitive, exact match)
-        if (taskAssignedTo === userEmployeeId) {
-          console.log(`Task ${task.id} matched with exact ID: ${userEmployeeId}`);
+        // Match by employee ID - exact match
+        if (userEmployeeId && taskAssignedTo === userEmployeeId) {
+          console.log(`Task ${task.id} matched with exact employee ID: ${userEmployeeId}`);
           return true;
         }
         
-        // Direct comparison (case insensitive)
-        if (taskAssignedTo.toLowerCase() === userEmployeeId.toLowerCase()) {
-          console.log(`Task ${task.id} matched with case-insensitive ID: ${userEmployeeId}`);
+        // Match by employee ID - case insensitive
+        if (userEmployeeId && taskAssignedTo.toLowerCase() === userEmployeeId.toLowerCase()) {
+          console.log(`Task ${task.id} matched with case-insensitive employee ID: ${userEmployeeId}`);
           return true;
         }
         
-        // "EMP0732" comparison
-        if (taskAssignedTo === "EMP0732") {
-          console.log(`Task ${task.id} matched with hardcoded EMP0732 value`);
+        // Match by email - exact match
+        if (userEmail && taskAssignedTo === userEmail) {
+          console.log(`Task ${task.id} matched with exact email: ${userEmail}`);
           return true;
         }
         
-        // Handle quoted strings (some tasks might have quotes in the assignedTo field)
-        if (taskAssignedTo === `"${userEmployeeId}"`) {
-          console.log(`Task ${task.id} matched with quoted ID: "${userEmployeeId}"`);
+        // Match by email - case insensitive
+        if (userEmail && taskAssignedTo.toLowerCase() === userEmail.toLowerCase()) {
+          console.log(`Task ${task.id} matched with case-insensitive email: ${userEmail}`);
           return true;
         }
         
-        // Check if the task.assignedTo is in the format "EMP0732"
-        if (taskAssignedTo === `"EMP0732"`) {
-          console.log(`Task ${task.id} matched with quoted EMP0732`);
-          return true;
-        }
-        
-        // Try matching just the numeric part of employeeId
-        if (userEmployeeId.startsWith('EMP')) {
-          const numericPart = userEmployeeId.replace('EMP', '');
-          if (taskAssignedTo === numericPart || taskAssignedTo.includes(numericPart)) {
-            console.log(`Task ${task.id} matched with numeric part of employee ID: ${numericPart}`);
+        // Match by substring of email (username part)
+        if (userEmail) {
+          const emailUsername = userEmail.split('@')[0];
+          if (taskAssignedTo.includes(emailUsername)) {
+            console.log(`Task ${task.id} matched with email username: ${emailUsername}`);
             return true;
           }
+        }
+        
+        // Match by "EMP" prefix
+        if (userEmployeeId && taskAssignedTo.includes('EMP') && taskAssignedTo.includes(userEmployeeId.replace('EMP', ''))) {
+          console.log(`Task ${task.id} matched with partial employee ID: ${userEmployeeId}`);
+          return true;
+        }
+        
+        // Handle hardcoded EMP0732 match (if this is Avijeet's ID)
+        if (taskAssignedTo === "EMP0732" && (userEmployeeId === "EMP0732" || userEmail.includes("avijeet"))) {
+          console.log(`Task ${task.id} matched with hardcoded EMP0732 value`);
+          return true;
         }
         
         // If we get to this point, no match was found
@@ -211,6 +217,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
+      console.log("Adding task with data:", task);
+      
       const { data, error } = await supabase
         .from('tasks')
         .insert({
