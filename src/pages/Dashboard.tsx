@@ -5,14 +5,11 @@ import {
   CheckCircle2, 
   Clock, 
   ListTodo, 
-  Users, 
-  PieChart,
-  BarChart3, 
   CircleAlert 
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { useTask, Task } from "@/context/TaskContext";
+import { useTask } from "@/context/TaskContext";
 import { useAuth } from "@/context/AuthContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import TaskCard from "@/components/TaskCard";
@@ -24,13 +21,22 @@ const Dashboard = () => {
   const { employees } = useEmployee();
   const navigate = useNavigate();
   
-  // Refresh tasks when component mounts and when user/profile changes
+  // Force fetch tasks on component mount and when user/profile changes
   useEffect(() => {
+    console.log("Dashboard - Fetching tasks on mount");
     fetchTasks();
-    console.log("Dashboard - Refreshing tasks");
+  }, []);
+  
+  useEffect(() => {
+    if (user && profile) {
+      console.log("Dashboard - User or profile changed, refreshing tasks");
+      fetchTasks();
+    }
   }, [user, profile]);
   
+  // Get user's tasks with logging
   const userTasks = getUserTasks();
+  console.log("Dashboard - User tasks:", userTasks);
 
   // Filter tasks by status
   const pendingTasks = userTasks.filter((task) => task.status === "pending");

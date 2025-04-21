@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { toast } from "sonner";
@@ -123,6 +122,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log("Profile employee ID:", profile?.employee_id);
     console.log("All tasks:", tasks);
 
+    // For admin users, return all tasks or filter by employeeId if provided
     if (user.role === "admin") {
       return employeeId
         ? tasks.filter((task) => task.assignedTo === employeeId)
@@ -139,28 +139,43 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log("Possible employee IDs to check:", possibleEmployeeIds);
       
-      // Find tasks assigned to any of the possible IDs (with improved matching)
-      const employeeTasks = tasks.filter((task) => {
-        // Direct matching (any of the possible IDs matches exactly with task.assignedTo)
-        const directMatch = possibleEmployeeIds.some(id => 
-          task.assignedTo === id
-        );
+      // Enhanced matching algorithm - check ALL tasks for possible matches
+      return tasks.filter(task => {
+        // Normalize the task assignedTo for comparison
+        const normalizedTaskAssignedTo = task.assignedTo.trim().toLowerCase();
         
-        // Case-insensitive matching
-        const caseInsensitiveMatch = possibleEmployeeIds.some(id => 
-          task.assignedTo.toLowerCase() === id.toLowerCase()
-        );
+        // Check if any of the possible IDs match with the task's assignedTo
+        for (const id of possibleEmployeeIds) {
+          const normalizedId = id.trim().toLowerCase();
+          
+          // Exact match
+          if (normalizedTaskAssignedTo === normalizedId) {
+            console.log(`Found exact match for task ${task.id} with ID ${id}`);
+            return true;
+          }
+          
+          // Case-insensitive match with the employee ID (most important)
+          if (normalizedTaskAssignedTo === user.employeeId?.toLowerCase() || 
+              normalizedTaskAssignedTo === profile?.employee_id?.toLowerCase()) {
+            console.log(`Found case-insensitive employee ID match for task ${task.id}`);
+            return true;
+          }
+          
+          // Handle potential prefixes/suffixes in the assignedTo field
+          if (normalizedTaskAssignedTo.includes(normalizedId)) {
+            console.log(`Found partial match for task ${task.id} with ID ${id}`);
+            return true;
+          }
+        }
         
-        // Partial matching (task.assignedTo contains any of the possible IDs)
-        const partialMatch = possibleEmployeeIds.some(id => 
-          task.assignedTo.includes(id)
-        );
+        // Special case: directly check for employee ID that might be in different formats
+        if (user.employeeId && task.assignedTo.includes(user.employeeId)) {
+          console.log(`Found direct employee ID match for task ${task.id}`);
+          return true;
+        }
         
-        return directMatch || caseInsensitiveMatch || partialMatch;
+        return false;
       });
-      
-      console.log("Filtered employee tasks:", employeeTasks);
-      return employeeTasks;
     }
   };
 

@@ -14,33 +14,29 @@ import { useTask, TaskStatus } from "@/context/TaskContext";
 import { useAuth } from "@/context/AuthContext";
 import TaskCard from "@/components/TaskCard";
 import TaskDebugInfo from "@/components/TaskDebugInfo";
-import { Plus, Search, Filter } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 
 const Tasks = () => {
   const { getUserTasks, fetchTasks, tasks } = useTask();
   const { isAdmin, user, profile } = useAuth();
   const navigate = useNavigate();
   
+  // Force fetch tasks when component mounts and when user/profile changes
   useEffect(() => {
-    // Refresh tasks when component mounts
+    console.log("Tasks component - Fetching tasks on mount");
     fetchTasks();
-    
-    // Log debug info to help diagnose task assignment issues
-    console.log("Tasks page - Current user:", user);
-    console.log("Tasks page - Current profile:", profile);
-    console.log("Tasks page - Is admin:", isAdmin);
-    console.log("Tasks page - All tasks:", tasks);
   }, []);
   
-  // Force a refresh of tasks when user or profile changes
   useEffect(() => {
     if (user && profile) {
-      console.log("User or profile changed, refreshing tasks");
+      console.log("Tasks component - User or profile changed, refreshing tasks");
       fetchTasks();
     }
   }, [user, profile]);
   
+  // Get user's tasks with enhanced debugging
   const allTasks = getUserTasks();
+  console.log("Tasks component - Got user tasks:", allTasks);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
