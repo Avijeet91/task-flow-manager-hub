@@ -1,9 +1,9 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Session, User } from "@supabase/supabase-js";
+import { User, UserSession } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
+// User Role Enum
 export type UserRole = "admin" | "employee";
 
 interface UserProfile {
@@ -17,8 +17,9 @@ interface UserProfile {
   join_date: string;
 }
 
-// Extended user type with the properties we need
+// Extended user interface
 export interface ExtendedUser extends User {
+  id: string;
   employeeId?: string;
   name?: string;
   role?: UserRole;
@@ -26,7 +27,7 @@ export interface ExtendedUser extends User {
 
 interface AuthContextType {
   user: ExtendedUser | null;
-  session: Session | null;
+  session: UserSession | null;
   profile: UserProfile | null;
   login: (email: string, password: string) => Promise<boolean>;
   signup: (email: string, password: string, userData: Record<string, any>) => Promise<boolean>;
@@ -39,7 +40,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<ExtendedUser | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<UserSession | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userRoles, setUserRoles] = useState<string[]>([]);
@@ -92,8 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
         console.error("Error initializing auth:", error);
       } finally {
-        // Always set loading to false even if there are errors
-        setIsLoading(false);
+        setIsLoading(false);  // Always set loading to false even if there are errors
       }
     };
 
@@ -161,9 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error("Error in fetchUserRoles:", error);
     } finally {
-      // Set loading to false after roles have been fetched
-      // This ensures we have all the necessary data before proceeding
-      setIsLoading(false);
+      setIsLoading(false);  // Set loading to false after roles are fetched
     }
   };
 
@@ -200,7 +198,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ): Promise<boolean> => {
     try {
       setIsLoading(true);
-      // Generate a unique employee ID
+      // Generate a unique employee ID if not provided
       const employeeId = userData.employeeId || `EMP${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
       
       const { error } = await supabase.auth.signUp({
@@ -223,7 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // After signup, we need to assign the employee role
+      // After signup, assign the employee role
       const { data: userData2 } = await supabase.auth.getUser();
       if (userData2?.user) {
         const { error: roleError } = await supabase
